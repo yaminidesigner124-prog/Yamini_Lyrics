@@ -37,9 +37,6 @@ export default async function SongPage({ params }: SongPageProps) {
     notFound();
   }
 
-  // Increment view count
-  await incrementSongStat(slug, 'view');
-
   // Fetch related songs from same deity
   const relatedSongs = (await getSongs({ categoryId: song.category_id, limit: 4 })).filter(
     (s) => s.id !== song.id
