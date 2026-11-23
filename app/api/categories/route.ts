@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCategories, createCategory, getCategoryBySlug, deleteCategory } from '@/lib/d1';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 // GET /api/categories
 export async function GET() {

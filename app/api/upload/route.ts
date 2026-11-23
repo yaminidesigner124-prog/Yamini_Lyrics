@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSong, getSongBySlug } from '@/lib/d1';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 // POST /api/upload - Ingest & save song to D1
 export async function POST(req: NextRequest) {

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'LordVen@0007';
 const AUTH_COOKIE = 'devotional_admin_session';
 

@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
+
+// Safe optional Node.js modules for local dev fallback (hidden from edge bundler)
+let fsModule: any = null;
+let pathModule: any = null;
+if (typeof window === 'undefined' && typeof process !== 'undefined' && process.versions?.node && !(globalThis as any).EdgeRuntime) {
+  try {
+    const nodeRequire = (globalThis as any).__non_webpack_require__ || eval('require');
+    fsModule = nodeRequire('fs');
+    pathModule = nodeRequire('path');
+  } catch {}
+}
 
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get('content-type') || '';
 
     let slug = '';
-    let buffer: Buffer;
+    let buffer: Buffer | null = null;
+    let base64Clean = '';
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
@@ -37,8 +47,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'No base64 image data provided' }, { status: 400 });
       }
 
-      // Remove data URL prefix if present
-      const base64Clean = base64Data.replace(/^data:image\/\w+;base64,/, '');
+      base64Clean = base64Data.replace(/^data:image\/\w+;base64,/, '');
       buffer = Buffer.from(base64Clean, 'base64');
     }
 
@@ -48,16 +57,21 @@ export async function POST(req: NextRequest) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || `deity-${Date.now()}`;
 
-    // Ensure target directory exists
-    const targetDir = path.join(process.cwd(), 'public', 'assets', 'deities');
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
-    }
-
     const fileName = `${safeSlug}.png`;
-    const targetPath = path.join(targetDir, fileName);
 
-    fs.writeFileSync(targetPath, buffer);
+    // If running in local Node environment, write to disk
+    if (fsModule && pathModule && buffer) {
+      try {
+        const targetDir = pathModule.join(process.cwd(), 'public', 'assets', 'deities');
+        if (!fsModule.existsSync(targetDir)) {
+          fsModule.mkdirSync(targetDir, { recursive: true });
+        }
+        const targetPath = pathModule.join(targetDir, fileName);
+        fsModule.writeFileSync(targetPath, buffer);
+      } catch (err) {
+        console.warn('Could not write image to local filesystem in edge runtime:', err);
+      }
+    }
 
     const publicUrl = `/assets/deities/${fileName}`;
 

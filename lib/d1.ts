@@ -1,11 +1,20 @@
-import fs from 'fs';
-import path from 'path';
 import { Category, Song } from './types';
 import { SEED_CATEGORIES, SEED_SONGS } from './seedData';
 
+// Safe optional Node.js modules for local dev fallback (hidden from edge bundler)
+let fsModule: any = null;
+let pathModule: any = null;
+if (typeof window === 'undefined' && typeof process !== 'undefined' && process.versions?.node && !(globalThis as any).EdgeRuntime) {
+  try {
+    const nodeRequire = (globalThis as any).__non_webpack_require__ || eval('require');
+    fsModule = nodeRequire('fs');
+    pathModule = nodeRequire('path');
+  } catch {}
+}
+
 // Local storage path for offline / local Next.js dev server
-const LOCAL_DB_DIR = path.join(process.cwd(), '.data');
-const LOCAL_DB_FILE = path.join(LOCAL_DB_DIR, 'devotional_db.json');
+const LOCAL_DB_DIR = pathModule ? pathModule.join(process.cwd(), '.data') : '';
+const LOCAL_DB_FILE = pathModule && LOCAL_DB_DIR ? pathModule.join(LOCAL_DB_DIR, 'devotional_db.json') : '';
 
 interface LocalDatabase {
   categories: Category[];
@@ -26,8 +35,8 @@ function getLocalData(): LocalDatabase {
   }
 
   try {
-    if (fs.existsSync(LOCAL_DB_FILE)) {
-      const content = fs.readFileSync(LOCAL_DB_FILE, 'utf-8');
+    if (fsModule && LOCAL_DB_FILE && fsModule.existsSync(LOCAL_DB_FILE)) {
+      const content = fsModule.readFileSync(LOCAL_DB_FILE, 'utf-8');
       memoryDb = JSON.parse(content);
       return memoryDb!;
     }
@@ -45,10 +54,12 @@ function getLocalData(): LocalDatabase {
   };
 
   try {
-    if (!fs.existsSync(LOCAL_DB_DIR)) {
-      fs.mkdirSync(LOCAL_DB_DIR, { recursive: true });
+    if (fsModule && LOCAL_DB_DIR && !fsModule.existsSync(LOCAL_DB_DIR)) {
+      fsModule.mkdirSync(LOCAL_DB_DIR, { recursive: true });
     }
-    fs.writeFileSync(LOCAL_DB_FILE, JSON.stringify(initialData, null, 2), 'utf-8');
+    if (fsModule && LOCAL_DB_FILE) {
+      fsModule.writeFileSync(LOCAL_DB_FILE, JSON.stringify(initialData, null, 2), 'utf-8');
+    }
   } catch (e) {
     // In edge runtime fs might fail, keep in memory
   }
@@ -60,10 +71,12 @@ function getLocalData(): LocalDatabase {
 function saveLocalData(data: LocalDatabase): void {
   memoryDb = data;
   try {
-    if (!fs.existsSync(LOCAL_DB_DIR)) {
-      fs.mkdirSync(LOCAL_DB_DIR, { recursive: true });
+    if (fsModule && LOCAL_DB_DIR && !fsModule.existsSync(LOCAL_DB_DIR)) {
+      fsModule.mkdirSync(LOCAL_DB_DIR, { recursive: true });
     }
-    fs.writeFileSync(LOCAL_DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    if (fsModule && LOCAL_DB_FILE) {
+      fsModule.writeFileSync(LOCAL_DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    }
   } catch (e) {
     // In edge runtime ignore fs write error
   }

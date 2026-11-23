@@ -11,6 +11,13 @@ interface SongPageProps {
 
 export const revalidate = 60;
 
+export async function generateStaticParams() {
+  const songs = await getSongs({});
+  return songs.map((s) => ({
+    slug: s.slug,
+  }));
+}
+
 export async function generateMetadata({ params }: SongPageProps) {
   const { slug } = await params;
   const song = await getSongBySlug(slug);

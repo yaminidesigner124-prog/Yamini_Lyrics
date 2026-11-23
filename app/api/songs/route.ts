@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSongs, getSongBySlug, incrementSongStat, updateSong, deleteSong } from '@/lib/d1';
 
-export const runtime = 'nodejs'; // Works for edge or nodejs
+export const runtime = 'edge';
 
 // GET /api/songs?slug=... or ?query=... or ?category=...
 export async function GET(req: NextRequest) {
