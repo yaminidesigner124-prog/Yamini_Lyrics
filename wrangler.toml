@@ -10,4 +10,4 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "devotional-lyrics-db"
-database_id = "your-database-id-placeholder"
+database_id = "770a5613-3ceb-4548-a571-3c8cb2de2435"
