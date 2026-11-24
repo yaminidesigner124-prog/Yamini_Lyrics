@@ -11,6 +11,7 @@ export default function AdminUploadPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const checkAuthAndLoad = async () => {
@@ -18,9 +19,11 @@ export default function AdminUploadPage() {
         const authRes = await fetch('/api/auth');
         const authData = await authRes.json();
         if (!authData.authenticated) {
+          setIsAuthenticated(false);
           router.replace('/admin/login?redirect=/admin/upload');
           return;
         }
+        setIsAuthenticated(true);
 
         const catsRes = await fetch('/api/categories');
         const catsData = await catsRes.json();
@@ -45,10 +48,18 @@ export default function AdminUploadPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !isAuthenticated) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center text-gold-radiant font-cinzel text-sm">
-        Verifying Admin Access...
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 space-y-4 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-gold-radiant/15 border border-gold-antique/50 flex items-center justify-center text-gold-radiant shadow-gold-sm animate-pulse">
+          <Shield className="w-7 h-7" />
+        </div>
+        <div className="text-xl font-bold text-white font-cinzel">
+          Admin Ingestion Studio Protected
+        </div>
+        <p className="text-xs text-gold-champagne/70 font-sans max-w-sm">
+          Verifying authorization credentials. Access restricted to authorized administrators only.
+        </p>
       </div>
     );
   }

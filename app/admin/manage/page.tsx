@@ -17,6 +17,7 @@ export default function AdminManagePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [revenueStats, setRevenueStats] = useState<RevenueStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -52,9 +53,11 @@ export default function AdminManagePage() {
       const authRes = await fetch('/api/auth');
       const authData = await authRes.json();
       if (!authData.authenticated) {
+        setIsAuthenticated(false);
         router.replace('/admin/login?redirect=/admin/manage');
         return;
       }
+      setIsAuthenticated(true);
 
       // 2. Fetch Data (Songs, Categories, Revenue/Transactions, Settings)
       const [songsRes, catsRes, txRes, setRes] = await Promise.all([
@@ -265,6 +268,22 @@ export default function AdminManagePage() {
       (s.category_name_english || '').toLowerCase().includes(q)
     );
   });
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 space-y-4 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-gold-radiant/15 border border-gold-antique/50 flex items-center justify-center text-gold-radiant shadow-gold-sm animate-pulse">
+          <Shield className="w-7 h-7" />
+        </div>
+        <div className="text-xl font-bold text-white font-cinzel">
+          Admin Studio Access Protected
+        </div>
+        <p className="text-xs text-gold-champagne/70 font-sans max-w-sm">
+          Verifying authorization credentials. Access restricted to authorized administrators only.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6">

@@ -103,6 +103,11 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 
 export async function onRequestPut(context: { request: Request; env: Env }) {
   try {
+    const cookieHeader = context.request.headers.get('Cookie') || '';
+    if (!cookieHeader.includes('devotional_admin_session=authenticated_sacred_session')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized. Admin session required.' }), { status: 401 });
+    }
+
     const body: any = await context.request.json();
     const { id, title_telugu, title_roman, title_english, lyrics_telugu, lyrics_roman, tags, is_locked, price } = body;
 
@@ -138,6 +143,11 @@ export async function onRequestPut(context: { request: Request; env: Env }) {
 
 export async function onRequestDelete(context: { request: Request; env: Env }) {
   try {
+    const cookieHeader = context.request.headers.get('Cookie') || '';
+    if (!cookieHeader.includes('devotional_admin_session=authenticated_sacred_session')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized. Admin session required.' }), { status: 401 });
+    }
+
     const { searchParams } = new URL(context.request.url);
     const id = searchParams.get('id');
 
