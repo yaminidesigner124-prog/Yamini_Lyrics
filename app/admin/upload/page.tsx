@@ -100,10 +100,11 @@ export default function AdminUploadPage() {
 
           <button
             onClick={handleLogout}
-            title="Log Out of Admin"
-            className="p-2 rounded-xl bg-obsidian border border-obsidian-border text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-colors"
+            title="Log Out of Admin Studio"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 hover:bg-red-950/70 transition-all text-xs sm:text-sm font-semibold shrink-0 shadow-sm cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span>Logout</span>
           </button>
         </div>
       </div>

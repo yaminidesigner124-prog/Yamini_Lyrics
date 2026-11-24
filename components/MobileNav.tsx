@@ -10,6 +10,11 @@ export default function MobileNav() {
   const pathname = usePathname();
   const { language, toggleLanguage, t } = useLanguage();
 
+  // Hide mobile bottom nav completely when inside Admin Studio
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-obsidian/95 backdrop-blur-xl border-t border-obsidian-border px-3 py-2 safe-area-pb">
       <div className="flex items-center justify-around">
@@ -34,7 +39,7 @@ export default function MobileNav() {
         {/* Quick Language Switcher on Mobile Bar */}
         <button
           onClick={toggleLanguage}
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-gold-radiant hover:brightness-110"
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-gold-radiant hover:brightness-110 cursor-pointer"
         >
           <Languages className="w-5 h-5 mb-0.5" />
           <span className="text-[10px] font-mono font-bold tracking-wider uppercase">

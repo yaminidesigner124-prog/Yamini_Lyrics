@@ -1,10 +1,17 @@
 'use client';
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function Footer() {
+  const pathname = usePathname();
   const { t } = useLanguage();
+
+  // Hide devotional footer completely when inside Admin Studio
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <footer className="border-t border-obsidian-border bg-obsidian-secondary/60 relative z-10 py-8 text-center text-xs text-gold-champagne/60">

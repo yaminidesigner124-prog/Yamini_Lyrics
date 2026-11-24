@@ -2,6 +2,11 @@
 export async function onRequest(context: { request: Request; next: () => Promise<Response> }) {
   const url = new URL(context.request.url);
 
+  // If directly visiting /admin or /admin/, redirect cleanly to /admin/manage
+  if (url.pathname === '/admin' || url.pathname === '/admin/') {
+    return Response.redirect(new URL('/admin/manage', context.request.url).toString(), 302);
+  }
+
   // 1. Allow login page to load without restrictions
   if (
     url.pathname === '/admin/login' || 
