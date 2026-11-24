@@ -29,7 +29,7 @@ export default function DeityCard({ category }: DeityCardProps) {
         <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-gold-radiant/10 border border-gold-radiant/30 text-gold-radiant text-[10px] sm:text-xs font-semibold group-hover:bg-gold-radiant/20 transition-all">
           <span>{category.song_count ?? 0}</span>
           <span className="text-[9px] sm:text-[10px] text-gold-champagne/80 uppercase tracking-wider font-sans">
-            {language === 'en' ? 'Hymns' : 'స్తోత్రాలు'}
+            {language === 'en' ? (category.song_count === 1 ? 'Hymn' : 'Hymns') : 'స్తోత్రాలు'}
           </span>
         </div>
       </div>

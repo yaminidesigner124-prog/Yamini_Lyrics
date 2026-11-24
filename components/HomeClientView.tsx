@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Category, Song } from '@/lib/types';
 import DeityCard from './DeityCard';
 import HomeSearch from './HomeSearch';
-import { BookOpen, FileDown, ArrowRight, Eye, Sparkles } from 'lucide-react';
+import { BookOpen, FileDown, ArrowRight, Eye, Download, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 interface HomeClientViewProps {
@@ -13,8 +13,33 @@ interface HomeClientViewProps {
   songs: Song[];
 }
 
-export default function HomeClientView({ categories, songs }: HomeClientViewProps) {
+export default function HomeClientView({ categories: initialCategories, songs: initialSongs }: HomeClientViewProps) {
   const { language, t } = useLanguage();
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [songs, setSongs] = useState<Song[]>(initialSongs);
+
+  // Fetch live real-time categories with exact hymn counts, views, and downloads directly from D1
+  useEffect(() => {
+    // 1. Fetch live categories with accurate song_count
+    fetch('/api/categories')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Array.isArray(data.categories) && data.categories.length > 0) {
+          setCategories(data.categories);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Fetch live songs with accurate real-time view_count and download_count
+    fetch('/api/songs?limit=12')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Array.isArray(data.songs) && data.songs.length > 0) {
+          setSongs(data.songs);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="w-full">
@@ -170,9 +195,15 @@ export default function HomeClientView({ categories, songs }: HomeClientViewProp
                     <span>{language === 'te' ? (song.category_name_telugu || song.category_name_english) : song.category_name_english}</span>
                   </span>
                   
-                  <div className="flex items-center gap-1 text-gold-champagne/60 text-[10px] sm:text-[11px] font-sans">
-                    <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold-antique" />
-                    <span>{song.view_count || 0}</span>
+                  <div className="flex items-center gap-2.5 text-gold-champagne/70 text-[10px] sm:text-[11px] font-sans">
+                    <span className="flex items-center gap-1" title="Views">
+                      <Eye className="w-3 h-3 text-gold-radiant" />
+                      <span>{song.view_count || 0}</span>
+                    </span>
+                    <span className="flex items-center gap-1" title="PDF Downloads">
+                      <Download className="w-3 h-3 text-gold-antique" />
+                      <span>{song.download_count || 0}</span>
+                    </span>
                   </div>
                 </div>
 
