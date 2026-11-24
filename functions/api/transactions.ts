@@ -9,9 +9,16 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     const songParam = body.song_id || body.songId || body.song_slug || body.songSlug;
     const utr = body.utr_number || body.utrNumber || body.utr;
     const amount = body.amount !== undefined ? parseInt(String(body.amount), 10) : 20;
-    const userName = body.user_name || body.userName || 'Devotee';
+    const userName = String(body.user_name || body.userName || '').trim();
     const userPhone = body.user_phone || body.userPhone || '';
     let songTitle = body.song_title || body.songTitle || 'Devotional Song';
+
+    if (!userName) {
+      return new Response(
+        JSON.stringify({ error: 'Devotee Name is required. Please provide your name to verify payment.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!songParam || !utr) {
       return new Response(

@@ -611,8 +611,11 @@ export default function AdminManagePage() {
                   <div key={tx.id} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                     <div>
                       <div className="font-semibold text-white font-cinzel">{tx.song_title}</div>
-                      <div className="text-[11px] text-gold-champagne/60">
-                        By {tx.user_name || 'Devotee'} • {tx.created_at}
+                      <div className="flex items-center gap-2 mt-1 text-[11px]">
+                        <span className="inline-flex items-center gap-1 font-semibold text-gold-radiant bg-gold-radiant/10 px-2.5 py-0.5 rounded-md border border-gold-radiant/30">
+                          👤 Devotee: {tx.user_name || 'Anonymous Devotee'}
+                        </span>
+                        <span className="text-gold-champagne/60">• {tx.created_at}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

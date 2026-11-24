@@ -49,6 +49,11 @@ export default function PdfUnlockModal({ isOpen, onClose, song, onUnlockSuccess 
     setErrorMsg(null);
 
     const cleanUtr = utrNumber.trim();
+    if (!userName.trim()) {
+      setErrorMsg('Devotee Name is required. Please enter your name.');
+      return;
+    }
+
     if (!cleanUtr || cleanUtr.length < 6) {
       setErrorMsg('Please enter a valid 12-digit UPI Reference / UTR Number from your payment app.');
       return;
@@ -167,12 +172,27 @@ export default function PdfUnlockModal({ isOpen, onClose, song, onUnlockSuccess 
 
         {/* Step 2: Verification Input */}
         <form onSubmit={handleVerifyPayment} className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-gold-radiant font-sans flex items-center justify-between">
+              <span>Devotee Name *</span>
+              <span className="text-[10px] text-gold-champagne/60 font-normal">(Required for offering record)</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="e.g. Ravindra"
+              className="w-full px-4 py-2.5 rounded-xl bg-obsidian border border-obsidian-border focus:border-gold-radiant text-white text-sm placeholder:text-gold-champagne/30 focus:outline-none transition-colors"
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <label className="font-semibold text-gold-radiant font-sans">
-                Step 2: Enter 12-digit UTR / Ref Number
+                12-digit UPI UTR / Ref Number *
               </label>
-              <span className="text-[10px] text-gold-champagne/60">(from payment receipt)</span>
+              <span className="text-[10px] text-gold-champagne/60 font-normal">(from GPay / PhonePe receipt)</span>
             </div>
             <input
               type="text"
@@ -181,19 +201,6 @@ export default function PdfUnlockModal({ isOpen, onClose, song, onUnlockSuccess 
               onChange={(e) => setUtrNumber(e.target.value)}
               placeholder="e.g. 432890123456"
               className="w-full px-4 py-2.5 rounded-xl bg-obsidian border border-obsidian-border focus:border-gold-radiant text-white font-mono text-sm placeholder:text-gold-champagne/30 focus:outline-none transition-colors"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] text-gold-champagne/70 font-sans">
-              Your Name / Devotee Name (Optional)
-            </label>
-            <input
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="e.g. Ravi Kumar"
-              className="w-full px-3.5 py-2 rounded-xl bg-obsidian border border-obsidian-border focus:border-gold-radiant text-white text-xs placeholder:text-gold-champagne/30 focus:outline-none transition-colors"
             />
           </div>
 

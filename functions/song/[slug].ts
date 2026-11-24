@@ -403,14 +403,22 @@ ${romanLyrics}
 
       <!-- UTR Verification Form -->
       <div class="space-y-3 pt-2 border-t border-obsidian-border text-left">
-        <label class="text-[11px] font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider block">
-          Enter 12-Digit UTR / Transaction ID
-        </label>
-        <div class="flex gap-2">
-          <input id="utr-input" type="text" placeholder="e.g. 432109876543" maxlength="16" class="flex-1 px-3.5 py-2.5 rounded-xl bg-obsidian border border-gold-antique/40 focus:border-gold-radiant text-white placeholder-gold-champagne/30 text-xs font-mono focus:outline-none" />
-          <button id="verify-btn" onclick="verifyAndUnlock()" class="px-4 py-2.5 rounded-xl bg-gold-antique/20 hover:bg-gold-antique/30 border border-gold-antique/50 text-gold-radiant font-bold text-xs transition-colors shrink-0">
-            Verify
-          </button>
+        <div class="space-y-1">
+          <label class="text-[11px] font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider block">
+            Devotee Name * (Required)
+          </label>
+          <input id="name-input" type="text" placeholder="e.g. Ravindra" required class="w-full px-3.5 py-2.5 rounded-xl bg-obsidian border border-gold-antique/40 focus:border-gold-radiant text-white placeholder-gold-champagne/30 text-xs font-sans focus:outline-none" />
+        </div>
+        <div class="space-y-1">
+          <label class="text-[11px] font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider block">
+            12-Digit UPI UTR / Transaction ID *
+          </label>
+          <div class="flex gap-2">
+            <input id="utr-input" type="text" placeholder="e.g. 432109876543" maxlength="16" class="flex-1 px-3.5 py-2.5 rounded-xl bg-obsidian border border-gold-antique/40 focus:border-gold-radiant text-white placeholder-gold-champagne/30 text-xs font-mono focus:outline-none" />
+            <button id="verify-btn" onclick="verifyAndUnlock()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian font-bold text-xs transition-colors shrink-0 shadow-gold-sm hover:brightness-110">
+              Verify
+            </button>
+          </div>
         </div>
         <p id="utr-error" class="text-[11px] text-red-400 font-sans hidden"></p>
       </div>
@@ -556,14 +564,24 @@ ${romanLyrics}
     }
 
     async function verifyAndUnlock() {
+      const nameInput = document.getElementById('name-input');
+      const devoteeName = (nameInput ? nameInput.value : '').trim();
       const utrInput = document.getElementById('utr-input');
       const utr = (utrInput.value || '').trim();
       const errEl = document.getElementById('utr-error');
       const btn = document.getElementById('verify-btn');
 
-      if (!utr || utr.length < 8) {
+      if (!devoteeName) {
+        errEl.textContent = 'Please enter your Devotee Name (Required)';
+        errEl.classList.remove('hidden');
+        if (nameInput) nameInput.focus();
+        return;
+      }
+
+      if (!utr || utr.length < 6) {
         errEl.textContent = 'Please enter a valid 12-digit UPI Transaction / UTR ID';
         errEl.classList.remove('hidden');
+        utrInput.focus();
         return;
       }
 
@@ -580,6 +598,8 @@ ${romanLyrics}
             songSlug: songData.slug,
             utr_number: utr,
             utrNumber: utr,
+            user_name: devoteeName,
+            userName: devoteeName,
             amount: songData.price
           })
         });
