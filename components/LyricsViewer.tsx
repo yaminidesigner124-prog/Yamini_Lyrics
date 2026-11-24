@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Song } from '@/lib/types';
-import { Copy, Check, Share2, FileDown, Columns, BookOpen, Languages } from 'lucide-react';
+import { Copy, Check, Share2, FileDown, Columns, BookOpen, Languages, Lock } from 'lucide-react';
 import PdfGenerator from './PdfGenerator';
+import PdfUnlockModal from './PdfUnlockModal';
 import { useLanguage } from '@/context/LanguageContext';
 
 interface LyricsViewerProps {
@@ -19,6 +20,17 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
+  // Check if song was previously unlocked in this browser session
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && sessionStorage.getItem(`unlocked_${song.id}`) === 'true') {
+        setIsUnlocked(true);
+      }
+    } catch {}
+  }, [song.id]);
 
   // Sync initial tab when language changes if user hasn't explicitly customized
   useEffect(() => {
@@ -171,11 +183,26 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
 
           {/* Download PDF Trigger Button */}
           <button
-            onClick={() => setShowPdfModal(true)}
+            onClick={() => {
+              if (song.is_locked === 1 && !isUnlocked) {
+                setShowUnlockModal(true);
+              } else {
+                setShowPdfModal(true);
+              }
+            }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique hover:brightness-110 text-obsidian font-bold text-xs transition-all duration-300 shadow-gold-sm hover:scale-105"
           >
-            <FileDown className="w-3.5 h-3.5 text-obsidian" />
-            <span>{t('song.downloadPdf')}</span>
+            {song.is_locked === 1 && !isUnlocked ? (
+              <>
+                <Lock className="w-3.5 h-3.5 text-obsidian" />
+                <span>{t('song.downloadPdf')} (₹{song.price || 20})</span>
+              </>
+            ) : (
+              <>
+                <FileDown className="w-3.5 h-3.5 text-obsidian" />
+                <span>{t('song.downloadPdf')}</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -276,6 +303,17 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
           </p>
         </div>
       </div>
+
+      {/* Sacred PDF Unlock Modal */}
+      <PdfUnlockModal
+        isOpen={showUnlockModal}
+        song={song}
+        onClose={() => setShowUnlockModal(false)}
+        onUnlockSuccess={() => {
+          setIsUnlocked(true);
+          setShowPdfModal(true);
+        }}
+      />
 
       {/* Sacred PDF Modal */}
       {showPdfModal && (

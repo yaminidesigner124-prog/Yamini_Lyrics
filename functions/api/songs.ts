@@ -104,7 +104,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 export async function onRequestPut(context: { request: Request; env: Env }) {
   try {
     const body: any = await context.request.json();
-    const { id, title_telugu, title_roman, title_english, lyrics_telugu, lyrics_roman, tags } = body;
+    const { id, title_telugu, title_roman, title_english, lyrics_telugu, lyrics_roman, tags, is_locked, price } = body;
 
     if (!id) {
       return new Response(JSON.stringify({ error: 'Song ID is required' }), { status: 400 });
@@ -122,9 +122,11 @@ export async function onRequestPut(context: { request: Request; env: Env }) {
         title_english = COALESCE(?, title_english),
         lyrics_telugu = COALESCE(?, lyrics_telugu),
         lyrics_roman = COALESCE(?, lyrics_roman),
-        tags = COALESCE(?, tags)
+        tags = COALESCE(?, tags),
+        is_locked = COALESCE(?, is_locked),
+        price = COALESCE(?, price)
       WHERE id = ?
-    `).bind(title_telugu, title_roman, title_english, lyrics_telugu, lyrics_roman, tags, id).run();
+    `).bind(title_telugu, title_roman, title_english, lyrics_telugu, lyrics_roman, tags, is_locked, price, id).run();
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },

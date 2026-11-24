@@ -5,7 +5,18 @@ interface Env {
 export async function onRequestPost(context: { request: Request; env: Env }) {
   try {
     const body: any = await context.request.json();
-    const { category_id, title_telugu, title_roman, slug, lyrics_telugu, lyrics_roman, tags } = body;
+    const { 
+      category_id, 
+      title_telugu, 
+      title_roman, 
+      title_english, 
+      slug, 
+      lyrics_telugu, 
+      lyrics_roman, 
+      tags,
+      is_locked = 1, // Default 1 (Paid) for new admin uploads as requested
+      price = 20      // Default ₹20
+    } = body;
 
     if (!category_id || !title_telugu || !lyrics_telugu) {
       return new Response(
@@ -26,21 +37,27 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 
     const id = `song-${Date.now()}`;
     await d1.prepare(`
-      INSERT INTO songs (id, category_id, title_telugu, title_roman, title_english, slug, lyrics_telugu, lyrics_roman, tags, view_count, download_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+      INSERT INTO songs (
+        id, category_id, title_telugu, title_roman, title_english, 
+        slug, lyrics_telugu, lyrics_roman, tags, is_locked, price, 
+        view_count, download_count
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
     `).bind(
       id,
       category_id,
       title_telugu,
       title_roman || title_telugu,
-      title_roman || title_telugu,
+      title_english || title_roman || title_telugu,
       finalSlug,
       lyrics_telugu,
       lyrics_roman || lyrics_telugu,
-      tags || ''
+      tags || '',
+      is_locked ? 1 : 0,
+      price ? parseInt(String(price), 10) : 20
     ).run();
 
-    return new Response(JSON.stringify({ success: true, song: { id, slug: finalSlug } }), {
+    return new Response(JSON.stringify({ success: true, song: { id, slug: finalSlug, is_locked, price } }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });

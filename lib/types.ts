@@ -26,9 +26,32 @@ export interface Song {
   lyrics_roman: string;
   meaning_english?: string;
   tags?: string;
+  is_locked?: number; // 0 = Free, 1 = Locked (Requires Payment)
+  price?: number;     // e.g. 20 (INR)
   view_count: number;
   download_count: number;
   created_at?: string;
+}
+
+export interface Transaction {
+  id: string;
+  song_id: string;
+  song_title: string;
+  amount: number;
+  utr_number: string;
+  user_name?: string;
+  user_phone?: string;
+  status: string;
+  created_at: string;
+}
+
+export interface RevenueStats {
+  totalRevenue: number;
+  totalTransactions: number;
+  upiId: string;
+  upiName: string;
+  defaultPrice: number;
+  recentTransactions: Transaction[];
 }
 
 export interface AdminAuthResponse {

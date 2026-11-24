@@ -39,6 +39,8 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
   const [lyricsRoman, setLyricsRoman] = useState<string>(initialSong?.lyrics_roman || '');
   const [meaningEnglish, setMeaningEnglish] = useState<string>(initialSong?.meaning_english || '');
   const [tags, setTags] = useState<string>(initialSong?.tags || '');
+  const [isLocked, setIsLocked] = useState<boolean>(initialSong?.is_locked !== undefined ? initialSong.is_locked === 1 : true);
+  const [price, setPrice] = useState<number>(initialSong?.price || 20);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -253,6 +255,8 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
         lyrics_roman: lyricsRoman || transliterateTeluguToRoman(lyricsTelugu),
         meaning_english: meaningEnglish,
         tags: tags,
+        is_locked: isLocked ? 1 : 0,
+        price: Number(price) || 20,
       };
 
       const endpoint = isEditing ? `/api/songs` : `/api/upload`;
@@ -547,6 +551,58 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
             placeholder="Provide verse-by-verse English translation or spiritual significance..."
             className="w-full p-4 rounded-2xl bg-obsidian border border-obsidian-border focus:border-gold-radiant text-stone-200 text-sm leading-relaxed font-sans focus:outline-none resize-y"
           />
+        </div>
+
+        {/* Sacred PDF Lock & Offering Setting */}
+        <div className="p-6 rounded-3xl bg-card-gradient border border-gold-antique/30 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🔒</span>
+                <h3 className="text-sm font-bold text-white font-cinzel">
+                  Sacred PDF Download Lock (Paid Offering)
+                </h3>
+              </div>
+              <p className="text-xs text-gold-champagne/70 font-sans">
+                Require devotees to make a UPI offering before unlocking and downloading the print-ready sacred PDF.
+              </p>
+            </div>
+
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isLocked}
+                onChange={(e) => setIsLocked(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-obsidian-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-radiant"></div>
+              <span className="ml-3 text-xs font-semibold text-gold-champagne">
+                {isLocked ? 'Locked (Paid)' : 'Free Download'}
+              </span>
+            </label>
+          </div>
+
+          {isLocked && (
+            <div className="pt-3 border-t border-obsidian-border flex items-center gap-3">
+              <label className="text-xs font-semibold text-gold-champagne/90 font-sans">
+                PDF Offering Amount (₹ INR):
+              </label>
+              <div className="relative w-28">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gold-radiant text-xs font-bold">₹</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={price}
+                  onChange={(e) => setPrice(Math.max(1, parseInt(e.target.value) || 0))}
+                  className="w-full pl-7 pr-3 py-1.5 rounded-xl bg-obsidian border border-obsidian-border text-white text-xs font-bold focus:border-gold-radiant focus:outline-none font-mono"
+                />
+              </div>
+              <span className="text-[11px] text-gold-champagne/60 font-sans">
+                (Standard: ₹20 • Direct to client ICICI UPI: yaminidesigner124@okicici)
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Tags Row & Submit Button */}
