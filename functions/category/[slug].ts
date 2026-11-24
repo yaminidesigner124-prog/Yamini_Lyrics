@@ -7,37 +7,32 @@ export async function onRequest(context: { request: Request; env: Env; params: {
     const { request, env, params } = context;
     const slug = params.slug;
 
-    // 1. Try serving pre-rendered static asset first if it exists
-    const assetRes = await (context as any).next();
-    if (assetRes && assetRes.status === 200) {
-      return assetRes;
-    }
-
-    // 2. If static file doesn't exist, check Cloudflare D1
+    // 1. Check Cloudflare D1 first
     const d1 = env.DB;
-    if (!d1) return assetRes;
+    if (d1) {
+      const category: any = await d1.prepare(`
+        SELECT * FROM categories WHERE slug = ? LIMIT 1
+      `).bind(slug).first();
 
-    const category: any = await d1.prepare(`
-      SELECT * FROM categories WHERE slug = ? LIMIT 1
-    `).bind(slug).first();
+      if (category) {
+        // Fetch songs for this category
+        const { results: songs } = await d1.prepare(`
+          SELECT * FROM songs WHERE category_id = ? ORDER BY view_count DESC
+        `).bind(category.id).all();
 
-    if (!category) {
-      return assetRes; // 404
+        const html = renderDynamicCategoryPage(category, songs || []);
+        return new Response(html, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'public, max-age=60, s-maxage=300',
+          },
+        });
+      }
     }
 
-    // Fetch songs for this category
-    const { results: songs } = await d1.prepare(`
-      SELECT * FROM songs WHERE category_id = ? ORDER BY view_count DESC
-    `).bind(category.id).all();
-
-    const html = renderDynamicCategoryPage(category, songs || []);
-    return new Response(html, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, max-age=60, s-maxage=300',
-      },
-    });
+    // 2. Fallback to static asset
+    return (context as any).next();
   } catch (err: any) {
     return new Response('Internal Server Error: ' + err.message, { status: 500 });
   }
@@ -71,7 +66,34 @@ function renderDynamicCategoryPage(category: any, songs: any[]): string {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/_next/static/css/2b15dae71a14cea9.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            obsidian: {
+              DEFAULT: '#07090e',
+              secondary: '#0c101a',
+              border: 'rgba(212, 175, 55, 0.2)',
+            },
+            gold: {
+              antique: '#d4af37',
+              radiant: '#f59e0b',
+              champagne: '#e2d5b5',
+              saffron: '#ea580c',
+            },
+          },
+          fontFamily: {
+            cinzel: ['Cinzel', 'serif'],
+            telugu: ['Noto Sans Telugu', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
   <style>
     body { background-color: #07090e; color: #e2d5b5; font-family: 'Plus Jakarta Sans', sans-serif; }
     .font-cinzel { font-family: 'Cinzel', serif; }
@@ -83,6 +105,7 @@ function renderDynamicCategoryPage(category: any, songs: any[]): string {
     .text-gold-champagne { color: #e2d5b5; }
     .border-gold-antique { border-color: rgba(212, 175, 55, 0.3); }
     .border-gold-radiant { border-color: #f59e0b; }
+    .border-obsidian-border { border-color: rgba(212, 175, 55, 0.2); }
     .bg-card-gradient { background: linear-gradient(135deg, rgba(17, 24, 39, 0.85) 0%, rgba(12, 16, 26, 0.95) 100%); }
     .bg-gold-gradient { background: linear-gradient(135deg, #f59e0b 0%, #d4af37 100%); }
     .shadow-gold-sm { box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15); }

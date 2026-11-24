@@ -11,67 +11,57 @@ export async function onRequest(context: { request: Request; env: Env; params: {
     const cookieHeader = request.headers.get('Cookie') || '';
     const isAdmin = cookieHeader.includes('devotional_admin_session=authenticated_sacred_session');
 
-    let assetRes: any = null;
-    // 1. If visitor is NOT Admin, try serving pre-rendered static asset first if it exists
-    if (!isAdmin) {
-      assetRes = await (context as any).next();
-      if (assetRes && assetRes.status === 200) {
-        return assetRes;
+    // 1. Check Cloudflare D1 first for this devotional stotram
+    const d1 = env.DB;
+    if (d1) {
+      const song: any = await d1.prepare(`
+        SELECT s.*, 
+               c.name_telugu as category_name_telugu, 
+               c.name_english as category_name_english, 
+               c.slug as category_slug
+        FROM songs s
+        LEFT JOIN categories c ON s.category_id = c.id
+        WHERE s.slug = ?
+        LIMIT 1
+      `).bind(slug).first();
+
+      if (song) {
+        // Auto-increment view count in database on real visits
+        d1.prepare('UPDATE songs SET view_count = view_count + 1 WHERE slug = ?').bind(slug).run().catch(() => {});
+
+        // Fetch related songs from same deity
+        let relatedSongs: any[] = [];
+        if (song.category_id) {
+          const relRes: any = await d1.prepare(`
+            SELECT id, title_telugu, title_roman, title_english, slug
+            FROM songs
+            WHERE category_id = ? AND id != ?
+            LIMIT 4
+          `).bind(song.category_id, song.id).all();
+          relatedSongs = relRes?.results || [];
+        }
+
+        // Fetch UPI ID from settings
+        let upiId = 'yaminidesigner124@okicici';
+        try {
+          const upiRow: any = await d1.prepare("SELECT value FROM settings WHERE key = 'admin_upi_id'").first();
+          if (upiRow && upiRow.value) upiId = upiRow.value;
+        } catch {}
+
+        // Render complete high-performance devotional song page
+        const html = renderDynamicSongPage(song, relatedSongs, upiId, isAdmin);
+        return new Response(html, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'public, max-age=30, s-maxage=60',
+          },
+        });
       }
     }
 
-    // 2. If static file doesn't exist, query Cloudflare D1
-    const d1 = env.DB;
-    if (!d1) {
-      return assetRes || new Response('Not Found', { status: 404 });
-    }
-
-    const song: any = await d1.prepare(`
-      SELECT s.*, 
-             c.name_telugu as category_name_telugu, 
-             c.name_english as category_name_english, 
-             c.slug as category_slug
-      FROM songs s
-      LEFT JOIN categories c ON s.category_id = c.id
-      WHERE s.slug = ?
-      LIMIT 1
-    `).bind(slug).first();
-
-    if (!song) {
-      return assetRes || new Response('Not Found', { status: 404 });
-    }
-
-    // Auto-increment view count in database on real visits
-    d1.prepare('UPDATE songs SET view_count = view_count + 1 WHERE slug = ?').bind(slug).run().catch(() => {});
-
-    // Fetch related songs from same deity
-    let relatedSongs: any[] = [];
-    if (song.category_id) {
-      const relRes: any = await d1.prepare(`
-        SELECT id, title_telugu, title_roman, title_english, slug
-        FROM songs
-        WHERE category_id = ? AND id != ?
-        LIMIT 4
-      `).bind(song.category_id, song.id).all();
-      relatedSongs = relRes?.results || [];
-    }
-
-    // Fetch UPI ID from settings
-    let upiId = 'yaminidesigner124@okicici';
-    try {
-      const upiRow: any = await d1.prepare("SELECT value FROM settings WHERE key = 'admin_upi_id'").first();
-      if (upiRow && upiRow.value) upiId = upiRow.value;
-    } catch {}
-
-    // 3. Render complete high-performance devotional song page
-    const html = renderDynamicSongPage(song, relatedSongs, upiId, isAdmin);
-    return new Response(html, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, max-age=60, s-maxage=300',
-      },
-    });
+    // 2. If not found in D1, try static asset fallback
+    return (context as any).next();
   } catch (err: any) {
     return new Response('Internal Server Error: ' + err.message, { status: 500 });
   }
@@ -110,7 +100,34 @@ function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, is
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/_next/static/css/2b15dae71a14cea9.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            obsidian: {
+              DEFAULT: '#07090e',
+              secondary: '#0c101a',
+              border: 'rgba(212, 175, 55, 0.2)',
+            },
+            gold: {
+              antique: '#d4af37',
+              radiant: '#f59e0b',
+              champagne: '#e2d5b5',
+              saffron: '#ea580c',
+            },
+          },
+          fontFamily: {
+            cinzel: ['Cinzel', 'serif'],
+            telugu: ['Noto Sans Telugu', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
@@ -124,10 +141,12 @@ function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, is
     .text-gold-champagne { color: #e2d5b5; }
     .border-gold-antique { border-color: rgba(212, 175, 55, 0.3); }
     .border-gold-radiant { border-color: #f59e0b; }
+    .border-obsidian-border { border-color: rgba(212, 175, 55, 0.2); }
     .bg-card-gradient { background: linear-gradient(135deg, rgba(17, 24, 39, 0.85) 0%, rgba(12, 16, 26, 0.95) 100%); }
     .bg-gold-gradient { background: linear-gradient(135deg, #f59e0b 0%, #d4af37 100%); }
     .shadow-gold-sm { box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15); }
     .shadow-gold-md { box-shadow: 0 8px 30px rgba(245, 158, 11, 0.22); }
+    .animate-pulse-subtle { animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
   </style>
 </head>
 <body class="bg-obsidian text-gold-champagne min-h-screen flex flex-col selection:bg-gold-radiant/30 selection:text-gold-radiant">
@@ -279,7 +298,7 @@ function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, is
 
           <!-- Paywall Blurred Preview for Non-Admin Locked Visitors -->
           <div id="paywall-overlay" class="${isAdmin ? 'hidden' : isLocked ? '' : 'hidden'} relative space-y-4">
-            <div class="space-y-1">
+            <div class="space-y-2">
               <span class="text-[11px] font-bold uppercase tracking-wider text-gold-radiant/80 font-sans block">
                 Introduction (Preview)
               </span>
@@ -288,33 +307,32 @@ ${escapeHtml((song.lyrics_roman || song.lyrics_telugu || '').split('\n').filter(
               </div>
             </div>
 
-            <div class="relative pt-2">
-              <div id="blurred-remainder" class="filter blur-md select-none pointer-events-none opacity-20 max-h-72 overflow-hidden font-sans text-base sm:text-lg leading-loose">
+            <!-- Blurred section with min-height and non-clipping centered lock card -->
+            <div class="relative pt-4 min-h-[440px] flex items-center justify-center">
+              <div id="blurred-remainder" class="filter blur-md select-none pointer-events-none opacity-20 max-h-96 overflow-hidden font-sans text-base sm:text-lg leading-loose absolute inset-0">
 ${escapeHtml((song.lyrics_roman || song.lyrics_telugu || '').split('\n').filter((l: string) => l.trim().length > 0).slice(3).join('\n\n'))}
               </div>
 
               <!-- Floating Sacred Lock Card -->
-              <div class="absolute inset-0 flex flex-col items-center justify-center p-3 sm:p-6 text-center z-20">
-                <div class="max-w-md w-full p-6 sm:p-8 rounded-3xl bg-obsidian-secondary/95 border-2 border-gold-antique/60 shadow-2xl backdrop-blur-2xl space-y-4">
-                  <div class="w-14 h-14 rounded-2xl bg-gold-radiant/20 border border-gold-radiant/50 flex items-center justify-center text-gold-radiant shadow-gold-sm mx-auto animate-pulse">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                  </div>
-                  <div class="space-y-1.5">
-                    <h3 class="text-lg sm:text-xl font-bold text-white font-cinzel">
-                      Sacred Lyrics &amp; PDF Locked
-                    </h3>
-                    <p class="text-xs text-gold-champagne/80 font-sans leading-relaxed">
-                      This stotram is locked. Pay a nominal seva fee of <strong class="text-gold-radiant font-bold">₹${price}</strong> to unlock complete unblurred lyrics and download the print-ready temple border A4 PDF.
-                    </p>
-                  </div>
-                  <button onclick="handlePdfTrigger()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian font-bold text-xs sm:text-sm tracking-wide shadow-gold-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 hover:scale-[1.02]">
-                    <svg class="w-4 h-4 text-obsidian" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    <span>Pay ₹${price} &amp; Unlock Full Lyrics + PDF</span>
-                  </button>
-                  <p class="text-[10px] text-gold-champagne/50 font-sans">
-                    Instant 1-click verification via PhonePe, Google Pay, Paytm, or BHIM UPI
+              <div class="relative z-20 w-full max-w-md p-6 sm:p-8 rounded-3xl bg-obsidian-secondary/95 border-2 border-gold-antique/60 shadow-2xl backdrop-blur-2xl text-center space-y-4">
+                <div class="w-14 h-14 rounded-2xl bg-gold-radiant/20 border border-gold-radiant/50 flex items-center justify-center text-gold-radiant shadow-gold-sm mx-auto">
+                  <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <div class="space-y-1.5">
+                  <h3 class="text-lg sm:text-xl font-bold text-white font-cinzel">
+                    Sacred Lyrics &amp; PDF Locked
+                  </h3>
+                  <p class="text-xs text-gold-champagne/80 font-sans leading-relaxed">
+                    This stotram is locked. Pay a nominal seva fee of <strong class="text-gold-radiant font-bold">₹${price}</strong> to unlock complete unblurred lyrics and download the print-ready temple border A4 PDF.
                   </p>
                 </div>
+                <button onclick="handlePdfTrigger()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian font-bold text-xs sm:text-sm tracking-wide shadow-gold-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 hover:scale-[1.02]">
+                  <svg class="w-4 h-4 text-obsidian" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  <span>Pay ₹${price} &amp; Unlock Full Lyrics + PDF</span>
+                </button>
+                <p class="text-[10px] text-gold-champagne/50 font-sans">
+                  Instant 1-click verification via PhonePe, Google Pay, Paytm, or BHIM UPI
+                </p>
               </div>
             </div>
           </div>

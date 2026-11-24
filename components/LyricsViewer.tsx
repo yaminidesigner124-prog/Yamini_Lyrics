@@ -262,40 +262,38 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
               </div>
             </div>
 
-            {/* Heavily Blurred Remainder */}
-            <div className="relative pt-2">
-              <div className={`filter blur-md select-none pointer-events-none opacity-20 max-h-72 overflow-hidden leading-loose ${activeTab === 'telugu' ? 'font-telugu' : 'font-sans'} ${fontSizes[fontSize][activeTab === 'telugu' ? 'telugu' : 'roman']}`}>
+            {/* Heavily Blurred Remainder with centered non-clipping paywall card */}
+            <div className="relative pt-4 min-h-[440px] flex items-center justify-center">
+              <div className={`filter blur-md select-none pointer-events-none opacity-20 max-h-96 overflow-hidden leading-loose absolute inset-0 ${activeTab === 'telugu' ? 'font-telugu' : 'font-sans'} ${fontSizes[fontSize][activeTab === 'telugu' ? 'telugu' : 'roman']}`}>
                 {activeTab === 'telugu' ? splitLyrics(song.lyrics_telugu).remainder : splitLyrics(song.lyrics_roman).remainder}
               </div>
 
               {/* Centered Sacred Gold Paywall Lock Overlay Card */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-3 sm:p-6 text-center z-20">
-                <div className="max-w-md w-full p-6 sm:p-8 rounded-3xl bg-obsidian-secondary/95 border-2 border-gold-antique/60 shadow-2xl backdrop-blur-2xl space-y-4 animate-scale-up">
-                  <div className="w-14 h-14 rounded-2xl bg-gold-radiant/20 border border-gold-radiant/50 flex items-center justify-center text-gold-radiant shadow-gold-sm mx-auto animate-pulse">
-                    <Lock className="w-7 h-7" />
-                  </div>
+              <div className="relative z-20 w-full max-w-md p-6 sm:p-8 rounded-3xl bg-obsidian-secondary/95 border-2 border-gold-antique/60 shadow-2xl backdrop-blur-2xl text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-gold-radiant/20 border border-gold-radiant/50 flex items-center justify-center text-gold-radiant shadow-gold-sm mx-auto">
+                  <Lock className="w-7 h-7" />
+                </div>
 
-                  <div className="space-y-1.5">
-                    <h3 className="text-lg sm:text-xl font-bold text-white font-cinzel">
-                      Sacred Lyrics &amp; PDF Locked
-                    </h3>
-                    <p className="text-xs text-gold-champagne/80 font-sans leading-relaxed">
-                      This stotram is locked. Pay a nominal seva fee of <strong className="text-gold-radiant font-bold">₹{song.price || 20}</strong> to unlock complete unblurred lyrics and download the print-ready temple border A4 PDF.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => setShowUnlockModal(true)}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian font-bold text-xs sm:text-sm tracking-wide shadow-gold-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 hover:scale-[1.02]"
-                  >
-                    <Lock className="w-4 h-4 text-obsidian" />
-                    <span>Pay ₹{song.price || 20} &amp; Unlock Full Lyrics + PDF</span>
-                  </button>
-
-                  <p className="text-[10px] text-gold-champagne/50 font-sans">
-                    Instant 1-click verification via PhonePe, Google Pay, Paytm, or BHIM UPI
+                <div className="space-y-1.5">
+                  <h3 className="text-lg sm:text-xl font-bold text-white font-cinzel">
+                    Sacred Lyrics &amp; PDF Locked
+                  </h3>
+                  <p className="text-xs text-gold-champagne/80 font-sans leading-relaxed">
+                    This stotram is locked. Pay a nominal seva fee of <strong className="text-gold-radiant font-bold">₹{song.price || 20}</strong> to unlock complete unblurred lyrics and download the print-ready temple border A4 PDF.
                   </p>
                 </div>
+
+                <button
+                  onClick={() => setShowUnlockModal(true)}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian font-bold text-xs sm:text-sm tracking-wide shadow-gold-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 hover:scale-[1.02]"
+                >
+                  <Lock className="w-4 h-4 text-obsidian" />
+                  <span>Pay ₹{song.price || 20} &amp; Unlock Full Lyrics + PDF</span>
+                </button>
+
+                <p className="text-[10px] text-gold-champagne/50 font-sans">
+                  Instant 1-click verification via PhonePe, Google Pay, Paytm, or BHIM UPI
+                </p>
               </div>
             </div>
           </div>
