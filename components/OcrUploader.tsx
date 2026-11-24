@@ -310,8 +310,8 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
       );
 
       setTimeout(() => {
-        router.push(`/song/${payload.slug}`);
-      }, 1200);
+        window.location.href = `/song/${payload.slug}`;
+      }, 1000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error publishing devotional song');
     } finally {

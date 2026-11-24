@@ -12,10 +12,22 @@ interface HomeSearchProps {
 
 export default function HomeSearch({ initialSongs }: HomeSearchProps) {
   const [query, setQuery] = useState('');
+  const [allSongs, setAllSongs] = useState<Song[]>(initialSongs);
   const [results, setResults] = useState<Song[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const { language, t } = useLanguage();
+
+  // Load all live songs on focus / query
+  const loadLiveSongs = async () => {
+    try {
+      const res = await fetch('/api/songs?limit=200');
+      const data = await res.json();
+      if (data.songs && Array.isArray(data.songs)) {
+        setAllSongs(data.songs);
+      }
+    } catch {}
+  };
 
   // Handle outside click to close dropdown
   useEffect(() => {
@@ -37,7 +49,7 @@ export default function HomeSearch({ initialSongs }: HomeSearchProps) {
     }
 
     const q = query.toLowerCase().trim();
-    const filtered = initialSongs.filter((song) => {
+    const filtered = allSongs.filter((song) => {
       const matchRoman = song.title_roman.toLowerCase().includes(q);
       const matchTelugu = song.title_telugu.toLowerCase().includes(q);
       const matchEnglish = (song.title_english || '').toLowerCase().includes(q);
@@ -49,7 +61,7 @@ export default function HomeSearch({ initialSongs }: HomeSearchProps) {
 
     setResults(filtered);
     setIsOpen(true);
-  }, [query, initialSongs]);
+  }, [query, allSongs]);
 
   return (
     <div ref={searchRef} className="relative w-full text-left">
@@ -63,7 +75,10 @@ export default function HomeSearch({ initialSongs }: HomeSearchProps) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => query.trim() && setIsOpen(true)}
+          onFocus={() => {
+            loadLiveSongs();
+            if (query.trim()) setIsOpen(true);
+          }}
           placeholder={t('hero.searchPlaceholder')}
           className="w-full pl-12 pr-10 py-3.5 sm:py-4 rounded-2xl bg-obsidian-secondary/95 border border-gold-antique/30 focus:border-gold-radiant text-white placeholder-gold-champagne/45 text-sm sm:text-base focus:outline-none shadow-gold-sm transition-all duration-300 font-sans"
         />

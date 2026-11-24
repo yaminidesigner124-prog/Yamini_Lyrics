@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Category, Song } from '@/lib/types';
 import DeityVisual from '@/components/DeityVisual';
@@ -14,6 +14,18 @@ interface CategoryClientViewProps {
 
 export default function CategoryClientView({ category, songs }: CategoryClientViewProps) {
   const { language, t } = useLanguage();
+  const [songList, setSongList] = useState<Song[]>(songs);
+
+  useEffect(() => {
+    fetch(`/api/songs?categorySlug=${encodeURIComponent(category.slug)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.songs && Array.isArray(data.songs)) {
+          setSongList(data.songs);
+        }
+      })
+      .catch(() => {});
+  }, [category.slug]);
 
   const deityName = language === 'te' ? (category.name_telugu || category.name_english) : category.name_english;
 
@@ -47,7 +59,7 @@ export default function CategoryClientView({ category, songs }: CategoryClientVi
                   {language === 'en' ? 'Deity Collection' : 'పవిత్ర నిలయం'}
                 </span>
                 <span className="text-xs text-gold-champagne/70 font-sans">
-                  {songs.length} {language === 'en' ? 'Stotrams Available' : 'స్తోత్రాలు అందుబాటులో ఉన్నాయి'}
+                  {songList.length} {language === 'en' ? 'Stotrams Available' : 'స్తోత్రాలు అందుబాటులో ఉన్నాయి'}
                 </span>
               </div>
 
@@ -76,14 +88,14 @@ export default function CategoryClientView({ category, songs }: CategoryClientVi
           <h2 className="text-xl sm:text-2xl font-bold text-white font-cinzel flex items-center gap-3">
             <span>{language === 'en' ? 'Available Stotrams' : 'అందుబాటులో ఉన్న స్తోత్రాలు'}</span>
             <span className="text-xs font-normal text-gold-champagne/60 font-sans">
-              ({songs.length} {language === 'en' ? 'hymns' : 'స్తోత్రాలు'})
+              ({songList.length} {language === 'en' ? 'hymns' : 'స్తోత్రాలు'})
             </span>
           </h2>
         </div>
 
-        {songs.length > 0 ? (
+        {songList.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-            {songs.map((song) => (
+            {songList.map((song) => (
               <div
                 key={song.id}
                 className="flex flex-col justify-between p-6 rounded-3xl bg-card-gradient border border-obsidian-border hover:border-gold-radiant/60 transition-all duration-500 hover:shadow-gold-md hover:-translate-y-1.5 group overflow-hidden relative backdrop-blur-md"
