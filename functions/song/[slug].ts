@@ -271,8 +271,59 @@ function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, is
         <div id="lyrics-container" class="rounded-3xl bg-card-gradient border border-obsidian-border p-6 sm:p-12 relative overflow-hidden backdrop-blur-xl shadow-gold-md">
           <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none opacity-[0.035] text-[220px] sm:text-[340px] font-serif text-gold-radiant">ॐ</div>
           
-          <div id="lyrics-text" class="max-w-2xl mx-auto font-sans whitespace-pre-wrap text-gold-champagne/95 text-base sm:text-lg leading-loose transition-all duration-200">
+          ${isAdmin ? `
+            <div class="mb-6 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-semibold shadow-sm">
+              <span>👑 Admin Master View • 100% Free Full Access</span>
+            </div>
+          ` : ''}
+
+          <!-- Paywall Blurred Preview for Non-Admin Locked Visitors -->
+          <div id="paywall-overlay" class="${isAdmin ? 'hidden' : isLocked ? '' : 'hidden'} relative space-y-4">
+            <div class="space-y-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-gold-radiant/80 font-sans block">
+                Introduction (Preview)
+              </span>
+              <div id="preview-text" class="whitespace-pre-wrap text-gold-champagne/95 font-sans text-base sm:text-lg leading-relaxed">
+${escapeHtml((song.lyrics_roman || song.lyrics_telugu || '').split('\n').filter((l: string) => l.trim().length > 0).slice(0, 3).join('\n\n'))}
+              </div>
+            </div>
+
+            <div class="relative pt-2">
+              <div id="blurred-remainder" class="filter blur-md select-none pointer-events-none opacity-20 max-h-72 overflow-hidden font-sans text-base sm:text-lg leading-loose">
+${escapeHtml((song.lyrics_roman || song.lyrics_telugu || '').split('\n').filter((l: string) => l.trim().length > 0).slice(3).join('\n\n'))}
+              </div>
+
+              <!-- Floating Sacred Lock Card -->
+              <div class="absolute inset-0 flex flex-col items-center justify-center p-3 sm:p-6 text-center z-20">
+                <div class="max-w-md w-full p-6 sm:p-8 rounded-3xl bg-obsidian-secondary/95 border-2 border-gold-antique/60 shadow-2xl backdrop-blur-2xl space-y-4">
+                  <div class="w-14 h-14 rounded-2xl bg-gold-radiant/20 border border-gold-radiant/50 flex items-center justify-center text-gold-radiant shadow-gold-sm mx-auto animate-pulse">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  </div>
+                  <div class="space-y-1.5">
+                    <h3 class="text-lg sm:text-xl font-bold text-white font-cinzel">
+                      Sacred Lyrics &amp; PDF Locked
+                    </h3>
+                    <p class="text-xs text-gold-champagne/80 font-sans leading-relaxed">
+                      This stotram is locked. Pay a nominal seva fee of <strong class="text-gold-radiant font-bold">₹${price}</strong> to unlock complete unblurred lyrics and download the print-ready temple border A4 PDF.
+                    </p>
+                  </div>
+                  <button onclick="handlePdfTrigger()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian font-bold text-xs sm:text-sm tracking-wide shadow-gold-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 hover:scale-[1.02]">
+                    <svg class="w-4 h-4 text-obsidian" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span>Pay ₹${price} &amp; Unlock Full Lyrics + PDF</span>
+                  </button>
+                  <p class="text-[10px] text-gold-champagne/50 font-sans">
+                    Instant 1-click verification via PhonePe, Google Pay, Paytm, or BHIM UPI
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Full Unblurred Lyrics Container (Visible to Admin or Unlocked Users) -->
+          <div id="full-lyrics-container" class="${isAdmin ? '' : isLocked ? 'hidden' : ''}">
+            <div id="lyrics-text" class="max-w-2xl mx-auto font-sans whitespace-pre-wrap text-gold-champagne/95 text-base sm:text-lg leading-loose transition-all duration-200">
 ${romanLyrics}
+            </div>
           </div>
 
           <div class="mt-14 pt-8 border-t border-gold-antique/20 flex flex-col items-center justify-center text-center">
@@ -521,8 +572,12 @@ ${romanLyrics}
         }
 
         localStorage.setItem('unlocked_' + songData.slug, 'true');
+        const paywall = document.getElementById('paywall-overlay');
+        const full = document.getElementById('full-lyrics-container');
+        if (paywall) paywall.classList.add('hidden');
+        if (full) full.classList.remove('hidden');
         closeUnlockModal();
-        showToast('Payment verified! Generating Sacred PDF...');
+        showToast('Payment verified! Full lyrics unlocked & generating Sacred PDF...');
         setTimeout(downloadPdf, 600);
       } catch (err) {
         errEl.textContent = err.message || 'Payment verification failed. Please check UTR number.';
@@ -564,6 +619,15 @@ ${romanLyrics}
       } catch (err) {
         console.error('PDF generation error, fallback to window print', err);
         window.print();
+      }
+    }
+    // Check if unlocked in localStorage
+    if (!songData.isAdmin && songData.isLocked) {
+      if (localStorage.getItem('unlocked_' + songData.slug) === 'true') {
+        const paywall = document.getElementById('paywall-overlay');
+        const full = document.getElementById('full-lyrics-container');
+        if (paywall) paywall.classList.add('hidden');
+        if (full) full.classList.remove('hidden');
       }
     }
   </script>

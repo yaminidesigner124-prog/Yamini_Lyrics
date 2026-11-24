@@ -53,6 +53,15 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
     }
   }, [language]);
 
+  const isEffectivelyLocked = !isAdmin && song.is_locked === 1 && !isUnlocked;
+
+  const splitLyrics = (text: string) => {
+    const lines = (text || '').split('\n').filter((l) => l.trim().length > 0);
+    const preview = lines.slice(0, 2).join('\n\n');
+    const remainder = lines.slice(2).join('\n\n') || lines.join('\n\n');
+    return { preview, remainder };
+  };
+
   const fontSizes = {
     sm: { telugu: 'text-base sm:text-lg leading-relaxed', roman: 'text-sm sm:text-base leading-relaxed', meaning: 'text-xs sm:text-sm leading-relaxed' },
     md: { telugu: 'text-lg sm:text-xl leading-loose', roman: 'text-base sm:text-lg leading-loose', meaning: 'text-sm sm:text-base leading-relaxed' },
@@ -233,80 +242,142 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
           ॐ
         </div>
 
-        {/* 1. SIDE-BY-SIDE MODE */}
-        {activeTab === 'side-by-side' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 divide-y md:divide-y-0 md:divide-x divide-gold-antique/15 animate-slide-up">
-            {/* Column 1: Roman Pronunciation */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2.5 border-b border-gold-antique/20 text-gold-radiant font-sans font-bold text-sm tracking-wide">
-                <span>{language === 'en' ? 'Roman Pronunciation (English Chanting)' : 'రోమన్ ఉచ్ఛారణ (ఆంగ్ల అక్షరాలు)'}</span>
-              </div>
-              <div className={`font-sans whitespace-pre-wrap text-gold-champagne/95 ${fontSizes[fontSize].roman}`}>
-                {song.lyrics_roman}
-              </div>
-            </div>
-
-            {/* Column 2: Telugu Script */}
-            <div className="pt-6 md:pt-0 md:pl-8 space-y-4">
-              <div className="flex items-center gap-2 pb-2.5 border-b border-gold-antique/20 text-gold-radiant font-sans font-bold text-sm tracking-wide">
-                <span>{language === 'en' ? 'Telugu Script' : 'స్వచ్ఛమైన తెలుగు లిపి'}</span>
-              </div>
-              <div className={`font-telugu whitespace-pre-wrap text-stone-100 ${fontSizes[fontSize].telugu}`}>
-                {song.lyrics_telugu}
-              </div>
-            </div>
+        {/* Admin Master Badge */}
+        {isAdmin && (
+          <div className="mb-6 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-semibold shadow-sm">
+            <span>👑 Admin Master View • 100% Free Full Access</span>
           </div>
         )}
 
-        {/* 2. ROMAN TELUGU ONLY */}
-        {activeTab === 'roman' && (
-          <div className="max-w-2xl mx-auto animate-slide-up">
-            <div className={`font-sans whitespace-pre-wrap text-gold-champagne/95 ${fontSizes[fontSize].roman}`}>
-              {song.lyrics_roman}
+        {/* 0. PAYWALL BLURRED PREVIEW MODE FOR NON-ADMIN LOCKED USERS */}
+        {isEffectivelyLocked ? (
+          <div className="relative space-y-4">
+            {/* Unblurred 2-line Teaser */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gold-radiant/80 font-sans block">
+                {activeTab === 'telugu' ? 'పరిచయం (Preview)' : 'Introduction (Preview)'}
+              </span>
+              <div className={`whitespace-pre-wrap text-gold-champagne/95 ${activeTab === 'telugu' ? 'font-telugu' : 'font-sans'} ${fontSizes[fontSize][activeTab === 'telugu' ? 'telugu' : 'roman']}`}>
+                {activeTab === 'telugu' ? splitLyrics(song.lyrics_telugu).preview : splitLyrics(song.lyrics_roman).preview}
+              </div>
+            </div>
+
+            {/* Heavily Blurred Remainder */}
+            <div className="relative pt-2">
+              <div className={`filter blur-md select-none pointer-events-none opacity-20 max-h-72 overflow-hidden leading-loose ${activeTab === 'telugu' ? 'font-telugu' : 'font-sans'} ${fontSizes[fontSize][activeTab === 'telugu' ? 'telugu' : 'roman']}`}>
+                {activeTab === 'telugu' ? splitLyrics(song.lyrics_telugu).remainder : splitLyrics(song.lyrics_roman).remainder}
+              </div>
+
+              {/* Centered Sacred Gold Paywall Lock Overlay Card */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-3 sm:p-6 text-center z-20">
+                <div className="max-w-md w-full p-6 sm:p-8 rounded-3xl bg-obsidian-secondary/95 border-2 border-gold-antique/60 shadow-2xl backdrop-blur-2xl space-y-4 animate-scale-up">
+                  <div className="w-14 h-14 rounded-2xl bg-gold-radiant/20 border border-gold-radiant/50 flex items-center justify-center text-gold-radiant shadow-gold-sm mx-auto animate-pulse">
+                    <Lock className="w-7 h-7" />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg sm:text-xl font-bold text-white font-cinzel">
+                      Sacred Lyrics &amp; PDF Locked
+                    </h3>
+                    <p className="text-xs text-gold-champagne/80 font-sans leading-relaxed">
+                      This stotram is locked. Pay a nominal seva fee of <strong className="text-gold-radiant font-bold">₹{song.price || 20}</strong> to unlock complete unblurred lyrics and download the print-ready temple border A4 PDF.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setShowUnlockModal(true)}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian font-bold text-xs sm:text-sm tracking-wide shadow-gold-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 hover:scale-[1.02]"
+                  >
+                    <Lock className="w-4 h-4 text-obsidian" />
+                    <span>Pay ₹{song.price || 20} &amp; Unlock Full Lyrics + PDF</span>
+                  </button>
+
+                  <p className="text-[10px] text-gold-champagne/50 font-sans">
+                    Instant 1-click verification via PhonePe, Google Pay, Paytm, or BHIM UPI
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        )}
+        ) : (
+          /* Normal Full Unblurred View for Admin or Unlocked Users */
+          <>
+            {/* 1. SIDE-BY-SIDE MODE */}
+            {activeTab === 'side-by-side' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 divide-y md:divide-y-0 md:divide-x divide-gold-antique/15 animate-slide-up">
+                {/* Column 1: Roman Pronunciation */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2.5 border-b border-gold-antique/20 text-gold-radiant font-sans font-bold text-sm tracking-wide">
+                    <span>{language === 'en' ? 'Roman Pronunciation (English Chanting)' : 'రోమన్ ఉచ్ఛారణ (ఆంగ్ల అక్షరాలు)'}</span>
+                  </div>
+                  <div className={`font-sans whitespace-pre-wrap text-gold-champagne/95 ${fontSizes[fontSize].roman}`}>
+                    {song.lyrics_roman}
+                  </div>
+                </div>
 
-        {/* 3. TELUGU SCRIPT ONLY */}
-        {activeTab === 'telugu' && (
-          <div className="max-w-2xl mx-auto animate-slide-up">
-            <div className={`font-telugu whitespace-pre-wrap text-stone-100 ${fontSizes[fontSize].telugu}`}>
-              {song.lyrics_telugu}
-            </div>
-          </div>
-        )}
-
-        {/* 4. ENGLISH MEANING TAB */}
-        {activeTab === 'meaning' && (
-          <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
-            <div className="p-4 rounded-2xl bg-obsidian/80 border border-gold-antique/30 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gold-radiant/15 border border-gold-radiant/30 flex items-center justify-center text-gold-radiant">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white font-cinzel">
-                  {language === 'en' ? 'English Meaning & Spiritual Significance' : 'ఆంగ్ల భావార్థం & ఆధ్యాత్మిక విశేషాలు'}
-                </h3>
-                <p className="text-xs text-gold-champagne/70 font-sans">
-                  {language === 'en'
-                    ? 'Comprehensive verse-by-verse translation for easy understanding & daily chanting'
-                    : 'ప్రతి శ్లోక సమగ్ర భావార్థం మరియు ఆధ్యాత్మిక విశిష్టత'}
-                </p>
-              </div>
-            </div>
-
-            {song.meaning_english ? (
-              <div className={`font-sans whitespace-pre-wrap text-stone-200 leading-relaxed ${fontSizes[fontSize].meaning} space-y-4 bg-obsidian-secondary/40 p-6 rounded-2xl border border-obsidian-border`}>
-                {song.meaning_english}
-              </div>
-            ) : (
-              <div className="p-8 text-center text-gold-champagne/60 text-sm font-sans">
-                {language === 'en'
-                  ? 'English translation will be updated shortly for this stotram.'
-                  : 'ఈ స్తోత్రానికి ఆంగ్ల భావార్థం త్వరలోనే పొందుపరచబడుతుంది.'}
+                {/* Column 2: Telugu Script */}
+                <div className="pt-6 md:pt-0 md:pl-8 space-y-4">
+                  <div className="flex items-center gap-2 pb-2.5 border-b border-gold-antique/20 text-gold-radiant font-sans font-bold text-sm tracking-wide">
+                    <span>{language === 'en' ? 'Telugu Script' : 'స్వచ్ఛమైన తెలుగు లిపి'}</span>
+                  </div>
+                  <div className={`font-telugu whitespace-pre-wrap text-stone-100 ${fontSizes[fontSize].telugu}`}>
+                    {song.lyrics_telugu}
+                  </div>
+                </div>
               </div>
             )}
-          </div>
+
+            {/* 2. ROMAN TELUGU ONLY */}
+            {activeTab === 'roman' && (
+              <div className="max-w-2xl mx-auto animate-slide-up">
+                <div className={`font-sans whitespace-pre-wrap text-gold-champagne/95 ${fontSizes[fontSize].roman}`}>
+                  {song.lyrics_roman}
+                </div>
+              </div>
+            )}
+
+            {/* 3. TELUGU SCRIPT ONLY */}
+            {activeTab === 'telugu' && (
+              <div className="max-w-2xl mx-auto animate-slide-up">
+                <div className={`font-telugu whitespace-pre-wrap text-stone-100 ${fontSizes[fontSize].telugu}`}>
+                  {song.lyrics_telugu}
+                </div>
+              </div>
+            )}
+
+            {/* 4. ENGLISH MEANING TAB */}
+            {activeTab === 'meaning' && (
+              <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
+                <div className="p-4 rounded-2xl bg-obsidian/80 border border-gold-antique/30 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gold-radiant/15 border border-gold-radiant/30 flex items-center justify-center text-gold-radiant">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white font-cinzel">
+                      {language === 'en' ? 'English Meaning & Spiritual Significance' : 'ఆంగ్ల భావార్థం & ఆధ్యాత్మిక విశేషాలు'}
+                    </h3>
+                    <p className="text-xs text-gold-champagne/70 font-sans">
+                      {language === 'en'
+                        ? 'Comprehensive verse-by-verse translation for easy understanding & daily chanting'
+                        : 'ప్రతి శ్లోక సమగ్ర భావార్థం మరియు ఆధ్యాత్మిక విశిష్టత'}
+                    </p>
+                  </div>
+                </div>
+
+                {song.meaning_english ? (
+                  <div className={`font-sans whitespace-pre-wrap text-stone-200 leading-relaxed ${fontSizes[fontSize].meaning} space-y-4 bg-obsidian-secondary/40 p-6 rounded-2xl border border-obsidian-border`}>
+                    {song.meaning_english}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-gold-champagne/60 text-sm font-sans">
+                    {language === 'en'
+                      ? 'English translation will be updated shortly for this stotram.'
+                      : 'ఈ స్తోత్రానికి ఆంగ్ల భావార్థం త్వరలోనే పొందుపరచబడుతుంది.'}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {/* Sacred Ending Blessing Marker */}
