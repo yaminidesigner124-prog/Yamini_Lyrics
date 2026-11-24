@@ -52,6 +52,14 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 
+-- 5. Admin Brute-Force Rate Limiting (5 Attempts -> 15 Min Lockout)
+CREATE TABLE IF NOT EXISTS admin_login_rate_limit (
+  key TEXT PRIMARY KEY,
+  attempts INTEGER DEFAULT 0,
+  locked_until INTEGER DEFAULT 0,
+  last_attempt INTEGER DEFAULT 0
+);
+
 -- Indexes for lightning fast Edge search & audit
 CREATE INDEX IF NOT EXISTS idx_songs_category ON songs(category_id);
 CREATE INDEX IF NOT EXISTS idx_songs_slug ON songs(slug);

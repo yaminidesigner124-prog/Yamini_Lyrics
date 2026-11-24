@@ -17,7 +17,7 @@ function LoginForm() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
-      setError('Please enter the Admin PIN / Secret Code');
+      setError('Please enter the Admin Secret Access Code');
       return;
     }
 
@@ -33,14 +33,14 @@ function LoginForm() {
 
       const data = await res.json();
       if (!res.ok || !data.authenticated) {
-        throw new Error(data.message || 'Incorrect Admin PIN / Code. Access Denied.');
+        throw new Error(data.message || 'Incorrect Access Code. Access Denied.');
       }
 
       // Success: redirect to target admin page
       router.push(redirectTo);
       router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please verify your PIN.');
+      setError(err.message || 'Authentication failed. Please verify your Secret Code.');
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +61,7 @@ function LoginForm() {
           Admin Studio Access
         </h1>
         <p className="text-xs sm:text-sm text-gold-champagne/70 mt-1 font-sans">
-          Protected Portal • Enter Secret PIN / Access Code to proceed
+          Protected Portal • Enter Secret Code to proceed
         </p>
       </div>
 
@@ -72,11 +72,11 @@ function LoginForm() {
         </div>
       )}
 
-      {/* PIN / Code Form */}
+      {/* Secret Code Form */}
       <form onSubmit={handleLogin} className="space-y-5">
         <div className="space-y-2">
           <label className="text-xs font-semibold text-gold-champagne/90 font-sans uppercase tracking-wider block">
-            Admin PIN / Access Code
+            Admin Secret Access Code
           </label>
           <div className="relative flex items-center">
             <div className="absolute left-4 text-gold-radiant pointer-events-none">
@@ -86,7 +86,7 @@ function LoginForm() {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter Admin PIN / Code..."
+              placeholder="Enter Secret Code..."
               required
               autoFocus
               className="w-full pl-11 pr-11 py-3.5 rounded-2xl bg-obsidian border border-gold-antique/40 focus:border-gold-radiant text-white placeholder-gold-champagne/40 text-sm focus:outline-none transition-all shadow-inner font-sans tracking-wide"
@@ -99,6 +99,9 @@ function LoginForm() {
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+          <p className="text-[11px] text-gold-champagne/50 font-sans">
+            5 wrong attempts will automatically lock access for 15 minutes.
+          </p>
         </div>
 
         <button
@@ -106,7 +109,7 @@ function LoginForm() {
           disabled={isLoading}
           className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-gold-radiant to-gold-antique hover:brightness-110 text-obsidian font-bold text-sm tracking-wide transition-all shadow-gold-sm hover:scale-[1.01] flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <span>{isLoading ? 'Verifying PIN...' : 'Authenticate & Enter Studio'}</span>
+          <span>{isLoading ? 'Verifying Code...' : 'Authenticate & Enter Studio'}</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </form>
