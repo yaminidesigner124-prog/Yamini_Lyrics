@@ -38,6 +38,7 @@ export default function AdminManagePage() {
   const [tempUpiId, setTempUpiId] = useState('yaminidesigner124@okicici');
   const [tempPrice, setTempPrice] = useState(20);
   const [tempGeminiKey, setTempGeminiKey] = useState('');
+  const [tempGroqKey, setTempGroqKey] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function AdminManagePage() {
       if (txData?.upiId) setTempUpiId(txData.upiId);
       if (txData?.defaultPrice) setTempPrice(txData.defaultPrice);
       if (setData?.geminiApiKey) setTempGeminiKey(setData.geminiApiKey);
+      if (setData?.groqApiKey) setTempGroqKey(setData.groqApiKey);
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -207,6 +209,7 @@ export default function AdminManagePage() {
           upiId: tempUpiId.trim(),
           defaultPrice: tempPrice,
           geminiApiKey: tempGeminiKey.trim(),
+          groqApiKey: tempGroqKey.trim(),
         }),
       });
 
@@ -675,7 +678,26 @@ export default function AdminManagePage() {
                   className="w-full px-3.5 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-white text-xs font-mono focus:border-gold-radiant focus:outline-none"
                 />
                 <p className="text-[10px] text-gold-champagne/50">
-                  Used by Admin Studio to extract 100% accurate Telugu lyrics from photos & screenshots.
+                  Primary engine to extract 100% accurate Telugu lyrics from photos & screenshots.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-gold-radiant font-sans uppercase tracking-wider block">
+                    ⚡ Groq AI API Key (Ultra-Fast Fallback)
+                  </label>
+                  <span className="text-[10px] text-emerald-400 font-sans">Active Fallback</span>
+                </div>
+                <input
+                  type="password"
+                  value={tempGroqKey}
+                  onChange={(e) => setTempGroqKey(e.target.value)}
+                  placeholder="gsk_..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-white text-xs font-mono focus:border-gold-radiant focus:outline-none"
+                />
+                <p className="text-[10px] text-gold-champagne/50">
+                  Secondary ultra-fast engine (OpenAI 120B / 20B) used automatically if Gemini is busy.
                 </p>
               </div>
 

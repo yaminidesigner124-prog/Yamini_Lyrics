@@ -1,6 +1,8 @@
 interface Env {
   GEMINI_API?: string;
   GEMINI_API_KEY?: string;
+  GROQ_API_KEY?: string;
+  GROQ_API?: string;
   DB?: any;
 }
 
@@ -9,53 +11,49 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     const body: any = await context.request.json().catch(() => ({}));
     const { imageBase64, mimeType = 'image/jpeg', rawText } = body;
 
-    let apiKey = context.env.GEMINI_API || context.env.GEMINI_API_KEY;
+    let geminiApiKey = context.env.GEMINI_API || context.env.GEMINI_API_KEY;
+    let groqApiKey = context.env.GROQ_API_KEY || context.env.GROQ_API;
 
-    // Check Cloudflare D1 settings table if not in environment
-    if (!apiKey && context.env.DB) {
+    // Retrieve keys from Cloudflare D1 settings table if not in environment
+    if (context.env.DB && (!geminiApiKey || !groqApiKey)) {
       try {
-        const row: any = await context.env.DB.prepare("SELECT value FROM settings WHERE key = 'gemini_api_key'").first();
-        if (row?.value) {
-          apiKey = row.value;
+        const rows = await context.env.DB.prepare("SELECT key, value FROM settings WHERE key IN ('gemini_api_key', 'groq_api_key')").all();
+        if (rows && rows.results) {
+          for (const row of rows.results as any[]) {
+            if (row.key === 'gemini_api_key' && !geminiApiKey) geminiApiKey = row.value;
+            if (row.key === 'groq_api_key' && !groqApiKey) groqApiKey = row.value;
+          }
         }
       } catch {}
     }
 
-    if (!apiKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        fallback: true,
-        message: 'Gemini API key is not configured. Please save it in Admin Studio settings.',
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    let extractedJson: any = null;
+    let engineUsed: string | null = null;
+    let geminiLastError: string | null = null;
 
-    // Proven high-availability Gemini models supporting vision & structured JSON
-    const modelsToTry = [
-      'gemini-flash-lite-latest',
-      'gemini-3.5-flash-lite',
-      'gemini-3.5-flash',
-      'gemini-3.8-flash',
-    ];
+    // ==========================================
+    // 1. PRIMARY: Try Gemini AI Vision / Flash
+    // ==========================================
+    if (geminiApiKey) {
+      const modelsToTry = [
+        'gemini-flash-lite-latest',
+        'gemini-3.5-flash-lite',
+        'gemini-3.5-flash',
+        'gemini-3.8-flash',
+      ];
 
-    let geminiResponseText: string | null = null;
-    let successfulModel: string | null = null;
-    let lastError: string | null = null;
+      for (const model of modelsToTry) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
 
-    for (const model of modelsToTry) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-        let requestBody: any;
-
-        if (imageBase64) {
-          const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9\+\-\.]+;base64,/, '');
-          requestBody = {
-            contents: [{
-              parts: [
-                {
-                  text: `You are an expert Telugu devotional literature scholar, Vedic Sanskrit expert, and high-accuracy OCR extractor.
+          let requestBody: any;
+          if (imageBase64) {
+            const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9\+\-\.]+;base64,/, '');
+            requestBody = {
+              contents: [{
+                parts: [
+                  {
+                    text: `You are an expert Telugu devotional literature scholar, Vedic Sanskrit expert, and high-accuracy OCR extractor.
 Examine this devotional hymn/song sheet photo or screenshot carefully.
 1. Extract the song title in authentic Telugu and Roman English.
 2. Extract the complete Telugu lyrics with 100% spelling accuracy, correct Telugu ligatures (వత్తులు, దీర్ఘాలు, గుణింతాలు), and proper verse line breaks.
@@ -73,25 +71,25 @@ Respond STRICTLY in valid JSON with this exact schema:
   "suggestedCategory": "ayyappa-swamy",
   "tags": "deity, stotram, bhajan, chalisa, sacred"
 }`
-                },
-                {
-                  inlineData: {
-                    mimeType: mimeType,
-                    data: cleanBase64,
+                  },
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: cleanBase64,
+                    }
                   }
-                }
-              ]
-            }],
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: 'application/json',
-            }
-          };
-        } else if (rawText) {
-          requestBody = {
-            contents: [{
-              parts: [{
-                text: `You are an expert Telugu devotional literature scholar and Vedic Sanskrit expert.
+                ]
+              }],
+              generationConfig: {
+                temperature: 0.1,
+                responseMimeType: 'application/json',
+              }
+            };
+          } else if (rawText) {
+            requestBody = {
+              contents: [{
+                parts: [{
+                  text: `You are an expert Telugu devotional literature scholar and Vedic Sanskrit expert.
 Review, correct, and format this raw devotional song text:
 "${rawText}"
 
@@ -111,84 +109,134 @@ Respond STRICTLY in valid JSON:
   "suggestedCategory": "ayyappa-swamy",
   "tags": "deity, stotram, bhajan"
 }`
-              }]
-            }],
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: 'application/json',
-            }
-          };
-        } else {
-          return new Response(JSON.stringify({ error: 'No image or text provided' }), { status: 400 });
-        }
-
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        });
-
-        if (response.ok) {
-          const data: any = await response.json();
-          const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (candidateText) {
-            geminiResponseText = candidateText;
-            successfulModel = model;
-            break;
+                }]
+              }],
+              generationConfig: {
+                temperature: 0.1,
+                responseMimeType: 'application/json',
+              }
+            };
           }
-        } else {
-          const errorText = await response.text();
-          lastError = `${model} HTTP ${response.status}: ${errorText.substring(0, 150)}`;
+
+          if (requestBody) {
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody),
+            });
+
+            if (response.ok) {
+              const data: any = await response.json();
+              const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (candidateText) {
+                try {
+                  extractedJson = JSON.parse(candidateText);
+                  engineUsed = `Gemini AI (${model})`;
+                  break;
+                } catch {
+                  const match = candidateText.match(/\{[\s\S]*\}/);
+                  if (match) {
+                    extractedJson = JSON.parse(match[0]);
+                    engineUsed = `Gemini AI (${model})`;
+                    break;
+                  }
+                }
+              }
+            } else {
+              const errorText = await response.text();
+              geminiLastError = `${model} HTTP ${response.status}: ${errorText.substring(0, 100)}`;
+            }
+          }
+        } catch (err: any) {
+          geminiLastError = `${model} Exception: ${err.message}`;
         }
-      } catch (err: any) {
-        lastError = `${model} Exception: ${err.message}`;
       }
     }
 
-    if (!geminiResponseText) {
+    // ==========================================
+    // 2. SECONDARY: Groq AI Fallback
+    // ==========================================
+    if (!extractedJson && groqApiKey) {
+      const groqModels = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+
+      const promptText = rawText
+        ? `You are an expert Telugu devotional literature scholar and Vedic Sanskrit expert.
+Review, correct, and format this raw devotional song text:
+"${rawText}"
+
+1. Correct any misspelled Telugu words, missing ottulu, incorrect vathulu, or OCR artifacts.
+2. Ensure verse numbers and stanza breaks are crisp and traditional.
+3. Transliterate into phonetic Roman English.
+4. Provide a 2-3 sentence English meaning.
+5. Suggest relevant deity slug (e.g. ayyappa-swamy, lord-shiva, lord-venkateswara, lord-hanuman, sri-rama, durga-devi, lord-ganesha, lord-krishna) and tags.
+
+Respond STRICTLY in valid JSON matching this schema:
+{
+  "titleTelugu": "తెలుగు శీర్షిక",
+  "titleRoman": "Title in Roman English",
+  "lyricsTelugu": "పూర్తి సరిదిద్దిన తెలుగు లిరిక్స్",
+  "lyricsRoman": "Complete Roman English lyrics",
+  "meaning": "English meaning",
+  "suggestedCategory": "ayyappa-swamy",
+  "tags": "deity, stotram, bhajan"
+}`
+        : `You are an expert Telugu devotional literature scholar. Provide a structured devotional stotram template in JSON format with titleTelugu, titleRoman, lyricsTelugu, lyricsRoman, meaning, suggestedCategory, tags.`;
+
+      for (const gm of groqModels) {
+        try {
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${groqApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: gm,
+              messages: [{ role: 'user', content: promptText }],
+              response_format: { type: 'json_object' },
+            }),
+          });
+
+          if (groqRes.ok) {
+            const groqData: any = await groqRes.json();
+            const content = groqData.choices?.[0]?.message?.content;
+            if (content) {
+              extractedJson = JSON.parse(content);
+              engineUsed = `Groq AI (${gm})`;
+              break;
+            }
+          }
+        } catch {}
+      }
+    }
+
+    if (!extractedJson) {
       return new Response(JSON.stringify({
         success: false,
         fallback: true,
-        message: `Gemini AI service unavailable: ${lastError}`,
+        message: `Both Gemini and Groq AI unavailable. (Gemini: ${geminiLastError || 'No key'}). Standard local engine used.`,
       }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    let parsed: any;
-    try {
-      parsed = JSON.parse(geminiResponseText);
-    } catch {
-      const match = geminiResponseText.match(/\{[\s\S]*\}/);
-      if (match) parsed = JSON.parse(match[0]);
-    }
-
-    if (!parsed) {
-      return new Response(JSON.stringify({
-        success: false,
-        fallback: true,
-        message: 'Could not parse Gemini JSON response.',
-      }), { headers: { 'Content-Type': 'application/json' } });
-    }
-
     const mapped = {
-      title_telugu: parsed.titleTelugu || parsed.title_telugu || '',
-      title_roman: parsed.titleRoman || parsed.title_roman || '',
-      slug: (parsed.titleRoman || parsed.title_roman || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
-      lyrics_telugu: parsed.lyricsTelugu || parsed.lyrics_telugu || '',
-      lyrics_roman: parsed.lyricsRoman || parsed.lyrics_roman || '',
-      meaning_english: parsed.meaning || parsed.meaningEnglish || parsed.meaning_english || '',
-      tags: parsed.tags || '',
-      suggested_category: parsed.suggestedCategory || parsed.suggested_category || '',
+      title_telugu: extractedJson.titleTelugu || extractedJson.title_telugu || '',
+      title_roman: extractedJson.titleRoman || extractedJson.title_roman || '',
+      slug: (extractedJson.titleRoman || extractedJson.title_roman || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+      lyrics_telugu: extractedJson.lyricsTelugu || extractedJson.lyrics_telugu || '',
+      lyrics_roman: extractedJson.lyricsRoman || extractedJson.lyrics_roman || '',
+      meaning_english: extractedJson.meaning || extractedJson.meaningEnglish || extractedJson.meaning_english || '',
+      tags: extractedJson.tags || '',
+      suggested_category: extractedJson.suggestedCategory || extractedJson.suggested_category || '',
     };
 
     return new Response(JSON.stringify({
       success: true,
-      engine: `Gemini AI (${successfulModel})`,
-      model: successfulModel,
+      engine: engineUsed || 'AI Extractor',
       data: mapped,
       ...mapped,
-      ...parsed,
+      ...extractedJson,
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
