@@ -22,9 +22,21 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Check if song was previously unlocked in this browser session
+  // Check if current user is logged-in Admin or has previously unlocked in this session
   useEffect(() => {
+    // 1. Check if caller is Admin (Admin has 100% free master access)
+    fetch('/api/auth')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.authenticated) {
+          setIsAdmin(true);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Check if song was previously unlocked in this browser session
     try {
       if (typeof window !== 'undefined' && sessionStorage.getItem(`unlocked_${song.id}`) === 'true') {
         setIsUnlocked(true);
@@ -184,7 +196,8 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
           {/* Download PDF Trigger Button */}
           <button
             onClick={() => {
-              if (song.is_locked === 1 && !isUnlocked) {
+              // Admin gets 100% free master access. Regular users pay if locked.
+              if (!isAdmin && song.is_locked === 1 && !isUnlocked) {
                 setShowUnlockModal(true);
               } else {
                 setShowPdfModal(true);
@@ -192,7 +205,12 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
             }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique hover:brightness-110 text-obsidian font-bold text-xs transition-all duration-300 shadow-gold-sm hover:scale-105"
           >
-            {song.is_locked === 1 && !isUnlocked ? (
+            {isAdmin ? (
+              <>
+                <FileDown className="w-3.5 h-3.5 text-obsidian" />
+                <span>{t('song.downloadPdf')} (Admin Free)</span>
+              </>
+            ) : song.is_locked === 1 && !isUnlocked ? (
               <>
                 <Lock className="w-3.5 h-3.5 text-obsidian" />
                 <span>{t('song.downloadPdf')} (₹{song.price || 20})</span>

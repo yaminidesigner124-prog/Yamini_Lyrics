@@ -7,16 +7,23 @@ export async function onRequest(context: { request: Request; env: Env; params: {
     const { request, env, params } = context;
     const slug = params.slug;
 
-    // 1. Try serving pre-rendered static asset first if it exists
-    const assetRes = await (context as any).next();
-    if (assetRes && assetRes.status === 200) {
-      return assetRes;
+    // Detect if current visitor is authenticated Admin
+    const cookieHeader = request.headers.get('Cookie') || '';
+    const isAdmin = cookieHeader.includes('devotional_admin_session=authenticated_sacred_session');
+
+    let assetRes: any = null;
+    // 1. If visitor is NOT Admin, try serving pre-rendered static asset first if it exists
+    if (!isAdmin) {
+      assetRes = await (context as any).next();
+      if (assetRes && assetRes.status === 200) {
+        return assetRes;
+      }
     }
 
     // 2. If static file doesn't exist, query Cloudflare D1
     const d1 = env.DB;
     if (!d1) {
-      return assetRes; // fallback to 404
+      return assetRes || new Response('Not Found', { status: 404 });
     }
 
     const song: any = await d1.prepare(`
@@ -31,7 +38,7 @@ export async function onRequest(context: { request: Request; env: Env; params: {
     `).bind(slug).first();
 
     if (!song) {
-      return assetRes; // 404
+      return assetRes || new Response('Not Found', { status: 404 });
     }
 
     // Auto-increment view count in database on real visits
@@ -57,7 +64,7 @@ export async function onRequest(context: { request: Request; env: Env; params: {
     } catch {}
 
     // 3. Render complete high-performance devotional song page
-    const html = renderDynamicSongPage(song, relatedSongs, upiId);
+    const html = renderDynamicSongPage(song, relatedSongs, upiId, isAdmin);
     return new Response(html, {
       status: 200,
       headers: {
@@ -80,8 +87,8 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
-function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string): string {
-  const isLocked = song.is_locked === 1;
+function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, isAdmin: boolean = false): string {
+  const isLocked = isAdmin ? false : (song.is_locked === 1);
   const price = song.price || 20;
   const teluguLyrics = escapeHtml(song.lyrics_telugu || '');
   const romanLyrics = escapeHtml(song.lyrics_roman || '');
@@ -246,8 +253,16 @@ function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string): s
 
             <!-- PDF Download Button -->
             <button onclick="handlePdfTrigger()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique hover:brightness-110 text-obsidian font-bold text-xs transition-all shadow-gold-sm hover:scale-105">
-              ${isLocked ? `<svg class="w-3.5 h-3.5 text-obsidian" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>` : `<svg class="w-3.5 h-3.5 text-obsidian" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M12 18v-6"></path><path d="m9 15 3 3 3-3"></path></svg>`}
-              <span>${isLocked ? `Download PDF (₹${price})` : 'Download Sacred PDF'}</span>
+              ${isAdmin ? `
+                <svg class="w-3.5 h-3.5 text-obsidian" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M12 18v-6"></path><path d="m9 15 3 3 3-3"></path></svg>
+                <span>Download Sacred PDF (Admin Free)</span>
+              ` : isLocked ? `
+                <svg class="w-3.5 h-3.5 text-obsidian" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span>Download PDF (₹${price})</span>
+              ` : `
+                <svg class="w-3.5 h-3.5 text-obsidian" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M12 18v-6"></path><path d="m9 15 3 3 3-3"></path></svg>
+                <span>Download Sacred PDF</span>
+              `}
             </button>
           </div>
         </div>
@@ -371,6 +386,7 @@ ${romanLyrics}
   <!-- Client-side Interactive Logic -->
   <script>
     const songData = {
+      isAdmin: ${isAdmin ? 'true' : 'false'},
       isLocked: ${isLocked ? 'true' : 'false'},
       slug: "${songSlug}",
       price: ${price},
@@ -453,6 +469,11 @@ ${romanLyrics}
     }
 
     function handlePdfTrigger() {
+      // Authenticated Admin bypasses fee: 100% free instant download!
+      if (songData.isAdmin) {
+        downloadPdf();
+        return;
+      }
       const isUnlocked = localStorage.getItem('unlocked_' + songData.slug) === 'true';
       if (songData.isLocked && !isUnlocked) {
         document.getElementById('unlock-modal').classList.remove('hidden');
