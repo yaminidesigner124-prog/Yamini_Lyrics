@@ -9,7 +9,8 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
       return new Response(JSON.stringify({
         upiId: 'yaminidesigner124@okicici',
         upiName: 'Yamini Lyrics',
-        defaultPrice: 20
+        defaultPrice: 20,
+        geminiApiKey: ''
       }), { headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -25,6 +26,7 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
       upiId: settingsMap['admin_upi_id'] || 'yaminidesigner124@okicici',
       upiName: settingsMap['admin_upi_name'] || 'Yamini Lyrics',
       defaultPrice: parseInt(settingsMap['default_pdf_price'] || '20', 10),
+      geminiApiKey: settingsMap['gemini_api_key'] || '',
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -48,7 +50,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     }
 
     const body: any = await context.request.json();
-    const { upiId, upiName, defaultPrice } = body;
+    const { upiId, upiName, defaultPrice, geminiApiKey } = body;
 
     const d1 = context.env.DB;
     if (!d1) {
@@ -63,6 +65,9 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     }
     if (defaultPrice !== undefined) {
       await d1.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').bind('default_pdf_price', String(defaultPrice)).run();
+    }
+    if (geminiApiKey !== undefined && String(geminiApiKey).trim() !== '') {
+      await d1.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').bind('gemini_api_key', String(geminiApiKey).trim()).run();
     }
 
     return new Response(JSON.stringify({ success: true, message: 'Settings saved' }), {

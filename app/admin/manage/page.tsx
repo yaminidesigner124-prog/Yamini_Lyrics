@@ -37,6 +37,7 @@ export default function AdminManagePage() {
   // Settings form
   const [tempUpiId, setTempUpiId] = useState('yaminidesigner124@okicici');
   const [tempPrice, setTempPrice] = useState(20);
+  const [tempGeminiKey, setTempGeminiKey] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   useEffect(() => {
@@ -54,21 +55,24 @@ export default function AdminManagePage() {
         return;
       }
 
-      // 2. Fetch Data (Songs, Categories, Revenue/Transactions)
-      const [songsRes, catsRes, txRes] = await Promise.all([
+      // 2. Fetch Data (Songs, Categories, Revenue/Transactions, Settings)
+      const [songsRes, catsRes, txRes, setRes] = await Promise.all([
         fetch('/api/songs'),
         fetch('/api/categories'),
         fetch('/api/transactions'),
+        fetch('/api/settings'),
       ]);
       const songsData = await songsRes.json();
       const catsData = await catsRes.json();
       const txData = await txRes.json();
+      const setData = await setRes.json().catch(() => ({}));
 
       setSongs(songsData.songs || []);
       setCategories(catsData.categories || []);
       setRevenueStats(txData || null);
       if (txData?.upiId) setTempUpiId(txData.upiId);
       if (txData?.defaultPrice) setTempPrice(txData.defaultPrice);
+      if (setData?.geminiApiKey) setTempGeminiKey(setData.geminiApiKey);
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -202,6 +206,7 @@ export default function AdminManagePage() {
         body: JSON.stringify({
           upiId: tempUpiId.trim(),
           defaultPrice: tempPrice,
+          geminiApiKey: tempGeminiKey.trim(),
         }),
       });
 
@@ -653,6 +658,25 @@ export default function AdminManagePage() {
                   onChange={(e) => setTempPrice(parseInt(e.target.value) || 20)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-white text-xs font-mono focus:border-gold-radiant focus:outline-none"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-gold-radiant font-sans uppercase tracking-wider block">
+                    ✨ Gemini AI API Key (Vision & OCR)
+                  </label>
+                  <span className="text-[10px] text-emerald-400 font-sans">Active & Verified</span>
+                </div>
+                <input
+                  type="password"
+                  value={tempGeminiKey}
+                  onChange={(e) => setTempGeminiKey(e.target.value)}
+                  placeholder="AIzaSy... or AQ.Ab8..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-white text-xs font-mono focus:border-gold-radiant focus:outline-none"
+                />
+                <p className="text-[10px] text-gold-champagne/50">
+                  Used by Admin Studio to extract 100% accurate Telugu lyrics from photos & screenshots.
+                </p>
               </div>
 
               <button

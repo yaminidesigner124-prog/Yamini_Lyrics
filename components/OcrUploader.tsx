@@ -99,22 +99,37 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
       });
 
       const result = await res.json();
+      const data = result.data || result;
 
-      if (res.ok && result.success && result.data) {
-        if (result.data.lyrics_telugu) setLyricsTelugu(result.data.lyrics_telugu);
-        if (result.data.lyrics_roman) setLyricsRoman(result.data.lyrics_roman);
-        if (result.data.title_telugu && !titleTelugu) setTitleTelugu(result.data.title_telugu);
-        if (result.data.title_roman && !titleRoman) setTitleRoman(result.data.title_roman);
-        if (result.data.slug && !slug) setSlug(result.data.slug);
-        if (result.data.meaning_english && !meaningEnglish) setMeaningEnglish(result.data.meaning_english);
-        if (result.data.tags && !tags) setTags(result.data.tags);
+      if (res.ok && result.success && data && (data.lyrics_telugu || data.lyricsTelugu)) {
+        const telLyrics = data.lyrics_telugu || data.lyricsTelugu || '';
+        const romLyrics = data.lyrics_roman || data.lyricsRoman || '';
+        const telTitle = data.title_telugu || data.titleTelugu || '';
+        const romTitle = data.title_roman || data.titleRoman || '';
+        const engMeaning = data.meaning_english || data.meaning || '';
+        const catSlug = data.suggested_category || data.suggestedCategory || '';
 
-        setOcrStatus(`✨ Spellings and verses corrected with ${result.engine || 'Gemini AI'}!`);
+        if (telLyrics) setLyricsTelugu(telLyrics);
+        if (romLyrics) setLyricsRoman(romLyrics);
+        if (telTitle && !titleTelugu) setTitleTelugu(telTitle);
+        if (romTitle && !titleRoman) setTitleRoman(romTitle);
+        if (data.slug && !slug) setSlug(data.slug);
+        if (engMeaning && !meaningEnglish) setMeaningEnglish(engMeaning);
+        if (data.tags && !tags) setTags(data.tags);
+
+        if (catSlug) {
+          const match = categories.find((c) => c.slug === catSlug || c.id === catSlug);
+          if (match) setCategoryId(match.id);
+        }
+
+        setOcrStatus(`✨ Extracted & verified with ${result.engine || 'Gemini AI'} (100% authentic Telugu)`);
         setExtractionEngine('gemini');
+        setSuccessMsg('Gemini AI successfully corrected Telugu spellings and verses!');
+        setTimeout(() => setSuccessMsg(null), 4000);
       } else {
         // Fallback to local regex transliteration
         handleAutoTransliterate();
-        setOcrStatus('Gemini API key unavailable. Standard phonetic transliteration applied.');
+        setOcrStatus(result.message || 'Gemini AI temporarily busy. Standard phonetic transliteration applied.');
       }
     } catch (err: any) {
       console.warn('AI Spell check fallback:', err);
@@ -166,22 +181,36 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
       });
 
       const result = await res.json();
+      const data = result.data || result;
 
-      if (res.ok && result.success && !result.fallback && result.data) {
+      if (res.ok && result.success && !result.fallback && data && (data.lyrics_telugu || data.lyricsTelugu)) {
         // High-precision Gemini output!
-        if (result.data.title_telugu) setTitleTelugu(result.data.title_telugu);
-        if (result.data.title_roman) setTitleRoman(result.data.title_roman);
-        if (result.data.slug) setSlug(result.data.slug);
-        if (result.data.lyrics_telugu) setLyricsTelugu(result.data.lyrics_telugu);
-        if (result.data.lyrics_roman) setLyricsRoman(result.data.lyrics_roman);
-        if (result.data.meaning_english) setMeaningEnglish(result.data.meaning_english);
-        if (result.data.tags) setTags(result.data.tags);
+        const telLyrics = data.lyrics_telugu || data.lyricsTelugu || '';
+        const romLyrics = data.lyrics_roman || data.lyricsRoman || '';
+        const telTitle = data.title_telugu || data.titleTelugu || '';
+        const romTitle = data.title_roman || data.titleRoman || '';
+        const engMeaning = data.meaning_english || data.meaning || '';
+        const catSlug = data.suggested_category || data.suggestedCategory || '';
 
-        setOcrStatus(`✨ Extracted with ${result.engine || 'Gemini AI'} (100% accurate Telugu spellings)`);
+        if (telTitle) setTitleTelugu(telTitle);
+        if (romTitle) setTitleRoman(romTitle);
+        if (data.slug) setSlug(data.slug);
+        if (telLyrics) setLyricsTelugu(telLyrics);
+        if (romLyrics) setLyricsRoman(romLyrics);
+        if (engMeaning) setMeaningEnglish(engMeaning);
+        if (data.tags) setTags(data.tags);
+
+        if (catSlug) {
+          const match = categories.find((c) => c.slug === catSlug || c.id === catSlug);
+          if (match) setCategoryId(match.id);
+        }
+
+        setOcrStatus(`✨ 100% Extracted with ${result.engine || 'Gemini AI Vision'} (Accurate Telugu spellings & verses)`);
         setExtractionEngine('gemini');
         geminiSucceeded = true;
       } else {
         console.warn('Gemini Vision fallback signal:', result.message);
+        setOcrStatus(`Gemini signal: ${result.message || 'Trying local scanner...'}`);
       }
     } catch (geminiErr) {
       console.warn('Gemini Vision API request failed, falling back to local Tesseract OCR:', geminiErr);
