@@ -6,16 +6,21 @@ interface Env {
 export async function onRequestPost(context: { request: Request; env: Env }) {
   try {
     const body: any = await context.request.json().catch(() => ({}));
-    const { song_id, song_title, utr_number, amount = 20, user_name, user_phone } = body;
+    const songParam = body.song_id || body.songId || body.song_slug || body.songSlug;
+    const utr = body.utr_number || body.utrNumber || body.utr;
+    const amount = body.amount !== undefined ? parseInt(String(body.amount), 10) : 20;
+    const userName = body.user_name || body.userName || 'Devotee';
+    const userPhone = body.user_phone || body.userPhone || '';
+    let songTitle = body.song_title || body.songTitle || 'Devotional Song';
 
-    if (!song_id || !utr_number) {
+    if (!songParam || !utr) {
       return new Response(
-        JSON.stringify({ error: 'Song ID and UTR Number are required' }),
+        JSON.stringify({ error: 'Song reference and UTR Number are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const cleanUtr = String(utr_number).trim().replace(/[^a-zA-Z0-9]/g, '');
+    const cleanUtr = String(utr).trim().replace(/[^a-zA-Z0-9]/g, '');
     if (cleanUtr.length < 6) {
       return new Response(
         JSON.stringify({ error: 'Invalid UTR format. Please enter a valid 12-digit transaction reference number.' }),
@@ -28,6 +33,19 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       return new Response(JSON.stringify({ error: 'Database unavailable' }), { status: 500 });
     }
 
+    // Resolve song_id and title if slug was provided
+    let finalSongId = songParam;
+    try {
+      const songRow: any = await d1.prepare(`
+        SELECT id, title_roman, title_telugu FROM songs WHERE id = ? OR slug = ? LIMIT 1
+      `).bind(songParam, songParam).first();
+
+      if (songRow) {
+        finalSongId = songRow.id;
+        songTitle = songRow.title_roman || songRow.title_telugu || songTitle;
+      }
+    } catch {}
+
     const txnId = `txn-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     // 1. Record transaction in database
@@ -36,18 +54,18 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')
     `).bind(
       txnId,
-      song_id,
-      song_title || 'Devotional Song',
+      finalSongId,
+      songTitle,
       amount,
       cleanUtr,
-      user_name || 'Devotee',
-      user_phone || ''
+      userName,
+      userPhone
     ).run();
 
     // 2. Increment song's download count
     await d1.prepare(`
       UPDATE songs SET download_count = download_count + 1 WHERE id = ?
-    `).bind(song_id).run();
+    `).bind(finalSongId).run();
 
     return new Response(
       JSON.stringify({
@@ -66,9 +84,18 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   }
 }
 
-// GET: Admin endpoint to view earnings, stats, and audit history
+// GET: Admin-ONLY endpoint to view earnings, stats, and audit history
 export async function onRequestGet(context: { request: Request; env: Env }) {
   try {
+    // ENFORCE ADMIN SESSION CHECK (Prevents financial data and UTR leak)
+    const cookieHeader = context.request.headers.get('Cookie') || '';
+    if (!cookieHeader.includes('devotional_admin_session=authenticated_sacred_session')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized. Admin session required.' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const d1 = context.env.DB;
     if (!d1) {
       return new Response(JSON.stringify({ totalRevenue: 0, totalTransactions: 0, recentTransactions: [] }), {
@@ -77,7 +104,7 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
     }
 
     // Total revenue & count
-    const statsRow = await d1.prepare(`
+    const statsRow: any = await d1.prepare(`
       SELECT 
         COALESCE(SUM(amount), 0) as totalRevenue,
         COUNT(id) as totalTransactions
@@ -85,16 +112,16 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
     `).first();
 
     // Recent 50 transactions
-    const listRes = await d1.prepare(`
+    const listRes: any = await d1.prepare(`
       SELECT * FROM transactions
       ORDER BY created_at DESC
       LIMIT 50
     `).all();
 
     // Settings
-    const upiRow = await d1.prepare(`SELECT value FROM settings WHERE key = 'admin_upi_id'`).first();
-    const nameRow = await d1.prepare(`SELECT value FROM settings WHERE key = 'admin_upi_name'`).first();
-    const priceRow = await d1.prepare(`SELECT value FROM settings WHERE key = 'default_pdf_price'`).first();
+    const upiRow: any = await d1.prepare(`SELECT value FROM settings WHERE key = 'admin_upi_id'`).first();
+    const nameRow: any = await d1.prepare(`SELECT value FROM settings WHERE key = 'admin_upi_name'`).first();
+    const priceRow: any = await d1.prepare(`SELECT value FROM settings WHERE key = 'default_pdf_price'`).first();
 
     return new Response(
       JSON.stringify({

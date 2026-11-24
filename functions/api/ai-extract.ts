@@ -8,6 +8,15 @@ interface Env {
 
 export async function onRequestPost(context: { request: Request; env: Env }) {
   try {
+    // ENFORCE ADMIN SESSION CHECK (Prevents AI API Quota exhaustion by unauthorized callers)
+    const cookieHeader = context.request.headers.get('Cookie') || '';
+    if (!cookieHeader.includes('devotional_admin_session=authenticated_sacred_session')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized. Admin session required.' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body: any = await context.request.json().catch(() => ({}));
     const { imageBase64, mimeType = 'image/jpeg', rawText } = body;
 

@@ -9,7 +9,7 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
     const query = searchParams.get('query');
     const categoryId = searchParams.get('categoryId');
     const categorySlug = searchParams.get('categorySlug');
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 50;
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 100;
 
     const d1 = context.env.DB;
     if (!d1) {
@@ -83,7 +83,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     const d1 = context.env.DB;
     if (d1 && slug && (action === 'view' || action === 'download')) {
       const col = action === 'view' ? 'view_count' : 'download_count';
-      await d1.prepare(`UPDATE songs SET ${col} = ${col} + 1 WHERE slug = ?`).bind(slug).run();
+      await d1.prepare(`UPDATE songs SET ${col} = ${col} + 1 WHERE slug = ? OR id = ?`).bind(slug, slug).run();
       return new Response(JSON.stringify({ success: true }), {
         headers: { 'Content-Type': 'application/json' },
       });
@@ -101,6 +101,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   }
 }
 
+// PUT: Dynamic Update supporting partial fields (eliminates undefined D1_TYPE_ERROR)
 export async function onRequestPut(context: { request: Request; env: Env }) {
   try {
     const cookieHeader = context.request.headers.get('Cookie') || '';
@@ -108,8 +109,20 @@ export async function onRequestPut(context: { request: Request; env: Env }) {
       return new Response(JSON.stringify({ error: 'Unauthorized. Admin session required.' }), { status: 401 });
     }
 
-    const body: any = await context.request.json();
-    const { id, title_telugu, title_roman, title_english, lyrics_telugu, lyrics_roman, tags, is_locked, price } = body;
+    const body: any = await context.request.json().catch(() => ({}));
+    const { 
+      id, 
+      category_id,
+      title_telugu, 
+      title_roman, 
+      title_english, 
+      lyrics_telugu, 
+      lyrics_roman, 
+      meaning_english,
+      tags, 
+      is_locked, 
+      price 
+    } = body;
 
     if (!id) {
       return new Response(JSON.stringify({ error: 'Song ID is required' }), { status: 400 });
@@ -120,20 +133,61 @@ export async function onRequestPut(context: { request: Request; env: Env }) {
       return new Response(JSON.stringify({ error: 'Database unavailable' }), { status: 500 });
     }
 
-    await d1.prepare(`
-      UPDATE songs SET
-        title_telugu = COALESCE(?, title_telugu),
-        title_roman = COALESCE(?, title_roman),
-        title_english = COALESCE(?, title_english),
-        lyrics_telugu = COALESCE(?, lyrics_telugu),
-        lyrics_roman = COALESCE(?, lyrics_roman),
-        tags = COALESCE(?, tags),
-        is_locked = COALESCE(?, is_locked),
-        price = COALESCE(?, price)
-      WHERE id = ?
-    `).bind(title_telugu, title_roman, title_english, lyrics_telugu, lyrics_roman, tags, is_locked, price, id).run();
+    // Build dynamic update clauses so NO `undefined` is ever passed to D1!
+    const updates: string[] = [];
+    const bindings: any[] = [];
 
-    return new Response(JSON.stringify({ success: true }), {
+    if (category_id !== undefined && category_id !== null) {
+      updates.push('category_id = ?');
+      bindings.push(category_id);
+    }
+    if (title_telugu !== undefined && title_telugu !== null) {
+      updates.push('title_telugu = ?');
+      bindings.push(title_telugu);
+    }
+    if (title_roman !== undefined && title_roman !== null) {
+      updates.push('title_roman = ?');
+      bindings.push(title_roman);
+    }
+    if (title_english !== undefined && title_english !== null) {
+      updates.push('title_english = ?');
+      bindings.push(title_english);
+    }
+    if (lyrics_telugu !== undefined && lyrics_telugu !== null) {
+      updates.push('lyrics_telugu = ?');
+      bindings.push(lyrics_telugu);
+    }
+    if (lyrics_roman !== undefined && lyrics_roman !== null) {
+      updates.push('lyrics_roman = ?');
+      bindings.push(lyrics_roman);
+    }
+    if (meaning_english !== undefined && meaning_english !== null) {
+      updates.push('meaning_english = ?');
+      bindings.push(meaning_english);
+    }
+    if (tags !== undefined && tags !== null) {
+      updates.push('tags = ?');
+      bindings.push(tags);
+    }
+    if (is_locked !== undefined && is_locked !== null) {
+      updates.push('is_locked = ?');
+      bindings.push(Number(is_locked) === 1 ? 1 : 0);
+    }
+    if (price !== undefined && price !== null) {
+      updates.push('price = ?');
+      bindings.push(parseInt(String(price), 10) || 20);
+    }
+
+    if (updates.length === 0) {
+      return new Response(JSON.stringify({ success: true, message: 'No fields to update' }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    bindings.push(id);
+    await d1.prepare(`UPDATE songs SET ${updates.join(', ')} WHERE id = ?`).bind(...bindings).run();
+
+    return new Response(JSON.stringify({ success: true, message: 'Song updated successfully in D1 database' }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {
@@ -157,10 +211,12 @@ export async function onRequestDelete(context: { request: Request; env: Env }) {
 
     const d1 = context.env.DB;
     if (d1) {
+      // Also delete any transaction records associated with this song
+      await d1.prepare('DELETE FROM transactions WHERE song_id = ?').bind(id).run().catch(() => {});
       await d1.prepare('DELETE FROM songs WHERE id = ?').bind(id).run();
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, message: 'Song deleted from D1 database' }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {

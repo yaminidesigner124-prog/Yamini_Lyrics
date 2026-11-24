@@ -13,7 +13,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       });
     }
 
-    const body: any = await context.request.json();
+    const body: any = await context.request.json().catch(() => ({}));
     const { 
       category_id, 
       title_telugu, 
@@ -22,8 +22,9 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       slug, 
       lyrics_telugu, 
       lyrics_roman, 
-      tags,
-      is_locked = 1, // Default 1 (Paid) for new admin uploads as requested
+      meaning_english,
+      tags, 
+      is_locked = 1, // Default 1 (Paid) for new admin uploads
       price = 20      // Default ₹20
     } = body;
 
@@ -34,8 +35,9 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       );
     }
 
-    const finalSlug = (slug || title_roman || title_telugu)
+    let finalSlug = (slug || title_roman || title_telugu)
       .toLowerCase()
+      .trim()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
@@ -44,14 +46,22 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       return new Response(JSON.stringify({ error: 'Database unavailable' }), { status: 500 });
     }
 
+    // Check if slug already exists to prevent duplicate conflict crash
+    try {
+      const existing = await d1.prepare('SELECT id FROM songs WHERE slug = ?').bind(finalSlug).first();
+      if (existing) {
+        finalSlug = `${finalSlug}-${Date.now().toString().slice(-4)}`;
+      }
+    } catch {}
+
     const id = `song-${Date.now()}`;
     await d1.prepare(`
       INSERT INTO songs (
         id, category_id, title_telugu, title_roman, title_english, 
-        slug, lyrics_telugu, lyrics_roman, tags, is_locked, price, 
-        view_count, download_count
+        slug, lyrics_telugu, lyrics_roman, meaning_english, tags, 
+        is_locked, price, view_count, download_count
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
     `).bind(
       id,
       category_id,
@@ -61,6 +71,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       finalSlug,
       lyrics_telugu,
       lyrics_roman || lyrics_telugu,
+      meaning_english || '',
       tags || '',
       is_locked ? 1 : 0,
       price ? parseInt(String(price), 10) : 20

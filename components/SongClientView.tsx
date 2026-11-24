@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { Song } from '@/lib/types';
 import LyricsViewer from '@/components/LyricsViewer';
@@ -14,6 +14,15 @@ interface SongClientViewProps {
 
 export default function SongClientView({ song, relatedSongs }: SongClientViewProps) {
   const { language, t } = useLanguage();
+
+  // Increment view count in D1 database on real page visit
+  useEffect(() => {
+    if (song?.slug) {
+      fetch(`/api/songs?slug=${encodeURIComponent(song.slug)}&action=view`, {
+        method: 'POST',
+      }).catch(() => {});
+    }
+  }, [song?.slug]);
 
   const title = language === 'te' ? song.title_telugu : song.title_roman;
   const categoryName = language === 'te' ? (song.category_name_telugu || song.category_name_english) : song.category_name_english;

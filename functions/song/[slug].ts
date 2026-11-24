@@ -34,6 +34,9 @@ export async function onRequest(context: { request: Request; env: Env; params: {
       return assetRes; // 404
     }
 
+    // Auto-increment view count in database on real visits
+    d1.prepare('UPDATE songs SET view_count = view_count + 1 WHERE slug = ?').bind(slug).run().catch(() => {});
+
     // Fetch related songs from same deity
     let relatedSongs: any[] = [];
     if (song.category_id) {
@@ -483,7 +486,9 @@ ${romanLyrics}
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            song_id: songData.slug,
             songSlug: songData.slug,
+            utr_number: utr,
             utrNumber: utr,
             amount: songData.price
           })

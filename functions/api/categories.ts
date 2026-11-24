@@ -103,8 +103,13 @@ export async function onRequestDelete(context: { request: Request; env: Env }) {
     }
 
     if (id) {
+      await d1.prepare('DELETE FROM songs WHERE category_id = ?').bind(id).run().catch(() => {});
       await d1.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
     } else if (slug) {
+      const cat = await d1.prepare('SELECT id FROM categories WHERE slug = ?').bind(slug).first();
+      if (cat && cat.id) {
+        await d1.prepare('DELETE FROM songs WHERE category_id = ?').bind(cat.id).run().catch(() => {});
+      }
       await d1.prepare('DELETE FROM categories WHERE slug = ?').bind(slug).run();
     } else {
       return new Response(JSON.stringify({ error: 'Category ID or slug is required' }), { status: 400 });

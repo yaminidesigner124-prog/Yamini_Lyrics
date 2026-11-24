@@ -1,5 +1,14 @@
 export async function onRequestPost(context: { request: Request }) {
   try {
+    // ENFORCE ADMIN SESSION CHECK
+    const cookieHeader = context.request.headers.get('Cookie') || '';
+    if (!cookieHeader.includes('devotional_admin_session=authenticated_sacred_session')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized. Admin session required.' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const contentType = context.request.headers.get('content-type') || '';
     let slug = '';
     let base64Clean = '';

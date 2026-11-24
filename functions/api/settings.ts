@@ -5,13 +5,16 @@ interface Env {
 export async function onRequestGet(context: { request: Request; env: Env }) {
   try {
     const d1 = context.env.DB;
+    const cookieHeader = context.request.headers.get('Cookie') || '';
+    const isAdmin = cookieHeader.includes('devotional_admin_session=authenticated_sacred_session');
+
     if (!d1) {
       return new Response(JSON.stringify({
         upiId: 'yaminidesigner124@okicici',
         upiName: 'Yamini Lyrics',
         defaultPrice: 20,
-        geminiApiKey: '',
-        groqApiKey: '',
+        // NEVER expose API keys to non-admin
+        ...(isAdmin ? { geminiApiKey: '', groqApiKey: '' } : {})
       }), { headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -23,13 +26,19 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
       }
     }
 
-    return new Response(JSON.stringify({
+    const publicSettings: any = {
       upiId: settingsMap['admin_upi_id'] || 'yaminidesigner124@okicici',
       upiName: settingsMap['admin_upi_name'] || 'Yamini Lyrics',
       defaultPrice: parseInt(settingsMap['default_pdf_price'] || '20', 10),
-      geminiApiKey: settingsMap['gemini_api_key'] || '',
-      groqApiKey: settingsMap['groq_api_key'] || '',
-    }), {
+    };
+
+    // ONLY authenticated admin can view AI API keys
+    if (isAdmin) {
+      publicSettings.geminiApiKey = settingsMap['gemini_api_key'] || '';
+      publicSettings.groqApiKey = settingsMap['groq_api_key'] || '';
+    }
+
+    return new Response(JSON.stringify(publicSettings), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {
@@ -45,13 +54,13 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     // Check admin session
     const cookieHeader = context.request.headers.get('Cookie') || '';
     if (!cookieHeader.includes('devotional_admin_session=authenticated_sacred_session')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      return new Response(JSON.stringify({ error: 'Unauthorized. Admin session required.' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const body: any = await context.request.json();
+    const body: any = await context.request.json().catch(() => ({}));
     const { upiId, upiName, defaultPrice, geminiApiKey, groqApiKey } = body;
 
     const d1 = context.env.DB;
@@ -59,10 +68,10 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       return new Response(JSON.stringify({ error: 'Database unavailable' }), { status: 500 });
     }
 
-    if (upiId) {
+    if (upiId !== undefined) {
       await d1.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').bind('admin_upi_id', String(upiId).trim()).run();
     }
-    if (upiName) {
+    if (upiName !== undefined) {
       await d1.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').bind('admin_upi_name', String(upiName).trim()).run();
     }
     if (defaultPrice !== undefined) {
