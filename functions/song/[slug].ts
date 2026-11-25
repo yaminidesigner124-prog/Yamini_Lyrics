@@ -170,10 +170,17 @@ function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, is
             <span class="text-[10px] sm:text-xs text-gold-champagne/70 font-sans hidden md:inline tracking-wide">Devotional Stotrams, Phonetic Transliterations &amp; Sacred PDFs</span>
           </div>
         </a>
+        ${isAdmin ? `
+        <nav class="hidden sm:flex items-center gap-1 bg-obsidian-secondary/80 p-1 rounded-xl border border-obsidian-border">
+          <a href="/admin/manage" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gold-champagne/80 hover:text-white hover:bg-white/5 transition-all">Stotrams</a>
+          <a href="/admin/upload" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gold-champagne/80 hover:text-white hover:bg-white/5 transition-all">Upload &amp; OCR</a>
+        </nav>
+        ` : `
         <nav class="hidden md:flex items-center gap-1 bg-obsidian-secondary/80 p-1.5 rounded-full border border-obsidian-border shadow-inner">
           <a class="px-5 py-2 rounded-full text-xs font-semibold tracking-wider uppercase text-gold-champagne/80 hover:text-white hover:bg-white/5 transition-all" href="/">Home</a>
           <a class="px-5 py-2 rounded-full text-xs font-semibold tracking-wider uppercase text-gold-champagne/80 hover:text-white hover:bg-white/5 transition-all" href="/#categories">Deities</a>
         </nav>
+        `}
         <div class="flex items-center gap-2 sm:gap-3">
           ${isAdmin ? `
             <a class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-radiant/15 hover:bg-gold-radiant/25 border border-gold-radiant/40 text-gold-radiant text-xs font-bold transition-all shadow-gold-sm" href="/admin/manage" title="Open Admin Studio">

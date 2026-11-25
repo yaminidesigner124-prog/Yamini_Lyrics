@@ -18,6 +18,18 @@ export default function HomeClientView({ categories: initialCategories, songs: i
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [songs, setSongs] = useState<Song[]>(initialSongs);
 
+  // If Admin Studio is active, redirect away from public Home to Admin Studio
+  useEffect(() => {
+    fetch('/api/auth')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.authenticated) {
+          window.location.replace('/admin/manage');
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Fetch live real-time categories with exact hymn counts, views, and downloads directly from D1
   useEffect(() => {
     // 1. Fetch live categories with accurate song_count

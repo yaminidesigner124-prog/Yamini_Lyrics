@@ -90,14 +90,6 @@ export default function AdminUploadPage() {
             Manage Folders & Stotrams
           </Link>
 
-          <Link
-            href="/"
-            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-obsidian border border-obsidian-border hover:border-gold-antique/40 text-gold-champagne/80 hover:text-white text-xs sm:text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Public Site</span>
-          </Link>
-
           <button
             onClick={handleLogout}
             title="Log Out of Admin Studio"

@@ -16,6 +16,18 @@ export default function CategoryClientView({ category, songs }: CategoryClientVi
   const { language, t } = useLanguage();
   const [songList, setSongList] = useState<Song[]>(songs);
 
+  // If Admin Studio is active, redirect away from public Deities view to Admin Studio
+  useEffect(() => {
+    fetch('/api/auth')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.authenticated) {
+          window.location.replace('/admin/manage');
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetch(`/api/songs?categorySlug=${encodeURIComponent(category.slug)}`)
       .then((res) => res.json())

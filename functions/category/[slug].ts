@@ -10,6 +10,11 @@ export async function onRequest(context: { request: Request; env: Env; params: {
     const cookieHeader = request.headers.get('Cookie') || '';
     const isAdmin = cookieHeader.includes('devotional_admin_session=authenticated_sacred_session');
 
+    // If Admin Studio is active, redirect away from public Deities view to Admin Studio
+    if (isAdmin) {
+      return Response.redirect(new URL('/admin/manage', request.url).toString(), 302);
+    }
+
     // 1. Check Cloudflare D1 first
     const d1 = env.DB;
     if (d1) {

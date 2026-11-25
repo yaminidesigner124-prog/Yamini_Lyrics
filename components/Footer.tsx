@@ -1,15 +1,23 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function Footer() {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
 
-  // Hide devotional footer completely when inside Admin Studio
-  if (pathname.startsWith('/admin')) {
+  useEffect(() => {
+    fetch('/api/auth')
+      .then((res) => res.json())
+      .then((data) => setIsAdminLoggedIn(!!data?.authenticated))
+      .catch(() => setIsAdminLoggedIn(false));
+  }, [pathname]);
+
+  // Hide footer when in admin studio or when admin is active
+  if (pathname.startsWith('/admin') || isAdminLoggedIn) {
     return null;
   }
 
