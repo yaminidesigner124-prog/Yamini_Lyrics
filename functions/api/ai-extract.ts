@@ -236,7 +236,11 @@ Respond STRICTLY in valid JSON matching this schema:
       lyrics_telugu: extractedJson.lyricsTelugu || extractedJson.lyrics_telugu || '',
       lyrics_roman: extractedJson.lyricsRoman || extractedJson.lyrics_roman || '',
       meaning_english: extractedJson.meaning || extractedJson.meaningEnglish || extractedJson.meaning_english || '',
-      tags: extractedJson.tags || '',
+      tags: Array.isArray(extractedJson.tags)
+        ? extractedJson.tags.map((t: any) => String(t || '').trim()).filter(Boolean).join(', ')
+        : (typeof extractedJson.tags === 'object' && extractedJson.tags !== null
+          ? Object.values(extractedJson.tags).map((t: any) => String(t || '').trim()).filter(Boolean).join(', ')
+          : String(extractedJson.tags || '').trim()),
       suggested_category: extractedJson.suggestedCategory || extractedJson.suggested_category || '',
     };
 

@@ -2,6 +2,21 @@ interface Env {
   DB?: any;
 }
 
+function toSafeString(val: any): string {
+  if (val === undefined || val === null) return '';
+  if (Array.isArray(val)) {
+    return val.map((item) => (typeof item === 'object' ? JSON.stringify(item) : String(item).trim())).filter(Boolean).join(', ');
+  }
+  if (typeof val === 'object') {
+    try {
+      return Object.values(val).map((v) => String(v).trim()).filter(Boolean).join(', ');
+    } catch {
+      return JSON.stringify(val);
+    }
+  }
+  return String(val).trim();
+}
+
 export async function onRequestPost(context: { request: Request; env: Env }) {
   try {
     // Verify admin authentication
@@ -64,15 +79,15 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
     `).bind(
       id,
-      category_id,
-      title_telugu,
-      title_roman || title_telugu,
-      title_english || title_roman || title_telugu,
+      toSafeString(category_id),
+      toSafeString(title_telugu),
+      toSafeString(title_roman || title_telugu),
+      toSafeString(title_english || title_roman || title_telugu),
       finalSlug,
-      lyrics_telugu,
-      lyrics_roman || lyrics_telugu,
-      meaning_english || '',
-      tags || '',
+      toSafeString(lyrics_telugu),
+      toSafeString(lyrics_roman || lyrics_telugu),
+      toSafeString(meaning_english || ''),
+      toSafeString(tags || ''),
       is_locked ? 1 : 0,
       price ? parseInt(String(price), 10) : 20
     ).run();

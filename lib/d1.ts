@@ -292,6 +292,19 @@ export async function getSongBySlug(slug: string): Promise<Song | null> {
   return songs.find((s) => s.slug === slug) || null;
 }
 
+function toSafeD1String(val: any): string {
+  if (val === undefined || val === null) return '';
+  if (Array.isArray(val)) return val.map((v) => String(v).trim()).filter(Boolean).join(', ');
+  if (typeof val === 'object') {
+    try {
+      return Object.values(val).map((v) => String(v).trim()).filter(Boolean).join(', ');
+    } catch {
+      return JSON.stringify(val);
+    }
+  }
+  return String(val).trim();
+}
+
 export async function createSong(song: Omit<Song, 'id' | 'view_count' | 'download_count'>): Promise<Song> {
   const newSong: Song = {
     ...song,
@@ -315,7 +328,7 @@ export async function createSong(song: Omit<Song, 'id' | 'view_count' | 'downloa
         newSong.slug,
         newSong.lyrics_telugu,
         newSong.lyrics_roman,
-        newSong.tags || ''
+        toSafeD1String(newSong.tags)
       ).run();
       return newSong;
     } catch (e) {
@@ -345,7 +358,7 @@ export async function updateSong(id: string, updates: Partial<Song>): Promise<So
         UPDATE songs 
         SET category_id = ?, title_telugu = ?, title_roman = ?, slug = ?, lyrics_telugu = ?, lyrics_roman = ?, tags = ?
         WHERE id = ?
-      `).bind(s.category_id, s.title_telugu, s.title_roman, s.slug, s.lyrics_telugu, s.lyrics_roman, s.tags || '', id).run();
+      `).bind(s.category_id, s.title_telugu, s.title_roman, s.slug, s.lyrics_telugu, s.lyrics_roman, toSafeD1String(s.tags), id).run();
     } catch (e) {
       console.error('D1 error updating song', e);
     }

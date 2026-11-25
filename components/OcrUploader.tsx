@@ -38,7 +38,14 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
   const [lyricsTelugu, setLyricsTelugu] = useState<string>(initialSong?.lyrics_telugu || '');
   const [lyricsRoman, setLyricsRoman] = useState<string>(initialSong?.lyrics_roman || '');
   const [meaningEnglish, setMeaningEnglish] = useState<string>(initialSong?.meaning_english || '');
-  const [tags, setTags] = useState<string>(initialSong?.tags || '');
+  const toCleanTags = (val: any): string => {
+    if (!val) return '';
+    if (Array.isArray(val)) return val.map((v) => String(v).trim()).filter(Boolean).join(', ');
+    if (typeof val === 'object') return Object.values(val).map((v) => String(v).trim()).filter(Boolean).join(', ');
+    return String(val).trim();
+  };
+
+  const [tags, setTags] = useState<string>(toCleanTags(initialSong?.tags || ''));
   const [isLocked, setIsLocked] = useState<boolean>(initialSong?.is_locked !== undefined ? initialSong.is_locked === 1 : true);
   const [price, setPrice] = useState<number>(initialSong?.price || 20);
 
@@ -115,7 +122,7 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
         if (romTitle && !titleRoman) setTitleRoman(romTitle);
         if (data.slug && !slug) setSlug(data.slug);
         if (engMeaning && !meaningEnglish) setMeaningEnglish(engMeaning);
-        if (data.tags && !tags) setTags(data.tags);
+        if (data.tags && !tags) setTags(toCleanTags(data.tags));
 
         if (catSlug) {
           const match = categories.find((c) => c.slug === catSlug || c.id === catSlug);
@@ -198,7 +205,7 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
         if (telLyrics) setLyricsTelugu(telLyrics);
         if (romLyrics) setLyricsRoman(romLyrics);
         if (engMeaning) setMeaningEnglish(engMeaning);
-        if (data.tags) setTags(data.tags);
+        if (data.tags) setTags(toCleanTags(data.tags));
 
         if (catSlug) {
           const match = categories.find((c) => c.slug === catSlug || c.id === catSlug);
@@ -283,7 +290,7 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
         lyrics_telugu: lyricsTelugu || lyricsRoman,
         lyrics_roman: lyricsRoman || transliterateTeluguToRoman(lyricsTelugu),
         meaning_english: meaningEnglish,
-        tags: tags,
+        tags: toCleanTags(tags),
         is_locked: isLocked ? 1 : 0,
         price: Number(price) || 20,
       };

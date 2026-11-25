@@ -2,6 +2,21 @@ interface Env {
   DB?: any;
 }
 
+function toSafeString(val: any): string {
+  if (val === undefined || val === null) return '';
+  if (Array.isArray(val)) {
+    return val.map((item) => (typeof item === 'object' ? JSON.stringify(item) : String(item).trim())).filter(Boolean).join(', ');
+  }
+  if (typeof val === 'object') {
+    try {
+      return Object.values(val).map((v) => String(v).trim()).filter(Boolean).join(', ');
+    } catch {
+      return JSON.stringify(val);
+    }
+  }
+  return String(val).trim();
+}
+
 export async function onRequestGet(context: { request: Request; env: Env }) {
   try {
     const { searchParams } = new URL(context.request.url);
@@ -139,35 +154,35 @@ export async function onRequestPut(context: { request: Request; env: Env }) {
 
     if (category_id !== undefined && category_id !== null) {
       updates.push('category_id = ?');
-      bindings.push(category_id);
+      bindings.push(toSafeString(category_id));
     }
     if (title_telugu !== undefined && title_telugu !== null) {
       updates.push('title_telugu = ?');
-      bindings.push(title_telugu);
+      bindings.push(toSafeString(title_telugu));
     }
     if (title_roman !== undefined && title_roman !== null) {
       updates.push('title_roman = ?');
-      bindings.push(title_roman);
+      bindings.push(toSafeString(title_roman));
     }
     if (title_english !== undefined && title_english !== null) {
       updates.push('title_english = ?');
-      bindings.push(title_english);
+      bindings.push(toSafeString(title_english));
     }
     if (lyrics_telugu !== undefined && lyrics_telugu !== null) {
       updates.push('lyrics_telugu = ?');
-      bindings.push(lyrics_telugu);
+      bindings.push(toSafeString(lyrics_telugu));
     }
     if (lyrics_roman !== undefined && lyrics_roman !== null) {
       updates.push('lyrics_roman = ?');
-      bindings.push(lyrics_roman);
+      bindings.push(toSafeString(lyrics_roman));
     }
     if (meaning_english !== undefined && meaning_english !== null) {
       updates.push('meaning_english = ?');
-      bindings.push(meaning_english);
+      bindings.push(toSafeString(meaning_english));
     }
     if (tags !== undefined && tags !== null) {
       updates.push('tags = ?');
-      bindings.push(tags);
+      bindings.push(toSafeString(tags));
     }
     if (is_locked !== undefined && is_locked !== null) {
       updates.push('is_locked = ?');
