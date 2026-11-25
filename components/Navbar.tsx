@@ -42,8 +42,8 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-14 sm:h-20">
           
           {/* Logo & Brand Identity */}
-          <Link href={showAdminUI ? '/admin/manage' : '/'} className="flex items-center gap-2.5 sm:gap-3.5 group shrink-0">
-            <div className="relative flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full group-hover:scale-105 transition-transform duration-300">
+          <Link href={showAdminUI ? '/admin/manage' : '/'} className="flex items-center gap-2 sm:gap-3.5 group shrink-0 min-w-0">
+            <div className="relative flex items-center justify-center w-8 h-8 sm:w-11 sm:h-11 rounded-full group-hover:scale-105 transition-transform duration-300 shrink-0">
               <img
                 src="/assets/logo.png"
                 alt="Yamini Lyrics Sacred Emblem"
@@ -51,17 +51,17 @@ export default function Navbar() {
               />
             </div>
             
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-base sm:text-2xl font-bold tracking-tight text-white font-cinzel drop-shadow-sm">
+                <span className="text-base sm:text-2xl font-bold tracking-tight text-white font-cinzel drop-shadow-sm whitespace-nowrap">
                   Yamini <span className="text-transparent bg-clip-text bg-gold-gradient">Lyrics</span>
                 </span>
                 {showAdminUI ? (
-                  <span className="text-[9px] sm:text-xs px-2 py-0.5 rounded-full bg-gold-radiant/20 text-gold-radiant border border-gold-radiant/50 font-bold tracking-wider uppercase shadow-gold-sm">
-                    Admin Studio
+                  <span className="text-[9px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-gold-radiant/20 text-gold-radiant border border-gold-radiant/50 font-bold tracking-wider uppercase shadow-gold-sm shrink-0">
+                    Admin
                   </span>
                 ) : (
-                  <span className="text-[9px] sm:text-xs px-2 py-0.5 rounded-full bg-gold-radiant/15 text-gold-radiant border border-gold-radiant/40 font-semibold tracking-wider uppercase hidden xs:inline shadow-gold-sm">
+                  <span className="text-[9px] sm:text-xs px-2 py-0.5 rounded-full bg-gold-radiant/15 text-gold-radiant border border-gold-radiant/40 font-semibold tracking-wider uppercase hidden xs:inline shadow-gold-sm shrink-0">
                     {t('nav.tagline')}
                   </span>
                 )}
@@ -73,12 +73,11 @@ export default function Navbar() {
           </Link>
 
           {/* WHEN ADMIN STUDIO IS ACTIVE (ADMIN LOGGED IN OR ON ADMIN ROUTE) */}
-          {/* Home and Deities are completely hidden! Only Admin Studio navigation is shown */}
           {showAdminUI ? (
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 shrink-0">
+              {/* DESKTOP ADMIN NAVIGATION (hidden on mobile < sm, visible on desktop) */}
               {!isLoginPage && (
-                <>
-                  {/* Admin Studio Navigation Links */}
+                <div className="hidden sm:flex items-center gap-3">
                   <nav className="flex items-center gap-1 bg-obsidian-secondary/80 p-1 rounded-xl border border-obsidian-border">
                     <Link
                       href="/admin/manage"
@@ -104,7 +103,6 @@ export default function Navbar() {
                     </Link>
                   </nav>
 
-                  {/* Explicit Logout Button with text and icon */}
                   <button
                     onClick={handleAdminLogout}
                     title="Log Out & Close Admin Access"
@@ -113,14 +111,15 @@ export default function Navbar() {
                     <LogOut className="w-3.5 h-3.5 shrink-0" />
                     <span>Logout</span>
                   </button>
-                </>
+                </div>
               )}
 
-              {isLoginPage && isAdminLoggedIn && (
+              {/* MOBILE TOP-RIGHT LOGOUT (Always visible on mobile in Admin Studio) */}
+              {(!isLoginPage || isAdminLoggedIn) && (
                 <button
                   onClick={handleAdminLogout}
                   title="Log Out & Close Admin Access"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  className="sm:hidden flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-950/50 border border-red-500/50 text-red-400 hover:text-red-300 text-xs font-bold transition-all shadow-sm shrink-0 cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5 shrink-0" />
                   <span>Logout</span>
@@ -188,6 +187,45 @@ export default function Navbar() {
           )}
 
         </div>
+
+        {/* DEDICATED MOBILE ADMIN NAVIGATION BAR (Fixed directly under Navbar on mobile) */}
+        {showAdminUI && !isLoginPage && (
+          <div className="sm:hidden pb-2.5 pt-0.5">
+            <div className="flex items-center gap-1.5 w-full bg-obsidian-secondary/95 p-1 rounded-xl border border-obsidian-border shadow-inner">
+              <Link
+                href="/admin/manage"
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
+                  pathname === '/admin/manage'
+                    ? 'bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian shadow-gold-sm font-bold'
+                    : 'text-gold-champagne/80 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5 shrink-0" />
+                <span>Stotrams</span>
+              </Link>
+
+              <Link
+                href="/admin/upload"
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
+                  pathname === '/admin/upload'
+                    ? 'bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian shadow-gold-sm font-bold'
+                    : 'text-gold-champagne/80 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <FileUp className="w-3.5 h-3.5 shrink-0" />
+                <span>Upload & OCR</span>
+              </Link>
+
+              <button
+                onClick={handleAdminLogout}
+                className="flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg text-xs font-bold text-red-400 bg-red-950/60 border border-red-500/50 hover:bg-red-950/90 shrink-0 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5 shrink-0" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );

@@ -40,8 +40,8 @@ export default function MobileNav() {
     }
 
     return (
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-obsidian/95 backdrop-blur-xl border-t border-obsidian-border px-3 py-2 safe-area-pb">
-        <div className="flex items-center justify-around">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-obsidian/95 backdrop-blur-xl border-t border-obsidian-border px-3 py-2 safe-area-pb">
+        <div className="flex items-center justify-around max-w-md mx-auto w-full">
           <Link
             href="/admin/manage"
             className={`flex flex-col items-center justify-center py-1 px-4 rounded-xl ${

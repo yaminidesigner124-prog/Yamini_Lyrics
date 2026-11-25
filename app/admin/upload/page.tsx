@@ -65,11 +65,11 @@ export default function AdminUploadPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 overflow-hidden">
       {/* Top Banner Navigation */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-obsidian-border">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gold-radiant/20 border border-gold-radiant/40 text-gold-radiant shadow-gold-sm">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gold-radiant/20 border border-gold-radiant/40 text-gold-radiant shadow-gold-sm shrink-0">
             <Shield className="w-5 h-5" />
           </div>
           <div>
@@ -82,18 +82,18 @@ export default function AdminUploadPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Link
             href="/admin/manage"
-            className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-obsidian-secondary border border-obsidian-border hover:border-gold-antique/50 text-gold-champagne hover:text-white text-xs sm:text-sm font-semibold transition-colors text-center"
+            className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-obsidian-secondary border border-obsidian-border hover:border-gold-antique/50 text-gold-champagne hover:text-white text-xs sm:text-sm font-semibold transition-colors text-center"
           >
-            Manage Folders & Stotrams
+            Manage Stotrams
           </Link>
 
           <button
             onClick={handleLogout}
             title="Log Out of Admin Studio"
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 hover:bg-red-950/70 transition-all text-xs sm:text-sm font-semibold shrink-0 shadow-sm cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 hover:bg-red-950/70 transition-all text-xs sm:text-sm font-semibold shrink-0 shadow-sm cursor-pointer"
           >
             <LogOut className="w-4 h-4 shrink-0" />
             <span>Logout</span>

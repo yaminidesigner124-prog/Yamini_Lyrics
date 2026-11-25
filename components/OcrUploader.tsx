@@ -350,18 +350,18 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={handleAiSpellCheck}
               disabled={!lyricsTelugu || isAiFixing}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian text-xs font-bold hover:brightness-110 transition-all disabled:opacity-40 shadow-gold-sm"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian text-xs font-bold hover:brightness-110 transition-all disabled:opacity-40 shadow-gold-sm"
               title="Fix Telugu typos, missing ottus, ligatures and format verses with Gemini AI"
             >
               {isAiFixing ? (
-                <RefreshCw className="w-4 h-4 animate-spin text-obsidian" />
+                <RefreshCw className="w-4 h-4 animate-spin text-obsidian shrink-0" />
               ) : (
-                <Sparkles className="w-4 h-4 text-obsidian" />
+                <Sparkles className="w-4 h-4 text-obsidian shrink-0" />
               )}
               <span>{isAiFixing ? 'AI Correcting...' : '✨ Gemini AI Spell Check'}</span>
             </button>
@@ -370,7 +370,7 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
               type="button"
               onClick={handleAutoTransliterate}
               disabled={!lyricsTelugu}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-secondary border border-gold-antique/40 text-gold-champagne text-xs font-semibold hover:text-white hover:border-gold-radiant transition-all disabled:opacity-40"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-secondary border border-gold-antique/40 text-gold-champagne text-xs font-semibold hover:text-white hover:border-gold-radiant transition-all disabled:opacity-40"
               title="Phonetic transliteration using standard engine"
             >
               <span>Phonetic Transliterate</span>
@@ -642,8 +642,8 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
         </div>
 
         {/* Tags Row & Submit Button */}
-        <div className="p-6 rounded-3xl bg-card-gradient border border-obsidian-border flex flex-wrap items-center justify-between gap-4">
-          <div className="flex-1 min-w-[280px] space-y-1">
+        <div className="p-4 sm:p-6 rounded-3xl bg-card-gradient border border-obsidian-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="w-full sm:flex-1 min-w-0 space-y-1">
             <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider">
               Search Tags (Comma separated)
             </label>
@@ -656,11 +656,11 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
             />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => router.push('/admin/manage')}
-              className="px-5 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-gold-champagne hover:text-white text-xs sm:text-sm font-semibold transition-colors"
+              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-gold-champagne hover:text-white text-xs sm:text-sm font-semibold transition-colors text-center"
             >
               Manage Stotrams
             </button>
@@ -668,17 +668,17 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique hover:brightness-110 text-obsidian font-bold text-xs sm:text-sm transition-all shadow-gold-md disabled:opacity-50"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique hover:brightness-110 text-obsidian font-bold text-xs sm:text-sm transition-all shadow-gold-md disabled:opacity-50 text-center"
             >
               {isSubmitting ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-obsidian" />
-                  <span>Publishing to Cloudflare D1...</span>
+                  <RefreshCw className="w-4 h-4 animate-spin text-obsidian shrink-0" />
+                  <span className="truncate">Publishing...</span>
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4 text-obsidian" />
-                  <span>{isEditing ? 'Update Stotram' : 'Publish to Cloudflare D1'}</span>
+                  <Send className="w-4 h-4 text-obsidian shrink-0" />
+                  <span className="truncate">{isEditing ? 'Update Stotram' : 'Publish to D1'}</span>
                 </>
               )}
             </button>

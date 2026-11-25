@@ -288,7 +288,7 @@ export default function AdminManagePage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 overflow-hidden">
       
       {/* Top Header Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-obsidian-border">
@@ -307,39 +307,39 @@ export default function AdminManagePage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             onClick={() => setShowSettingsModal(true)}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian border border-obsidian-border hover:border-gold-antique/50 text-gold-champagne hover:text-white font-semibold text-xs sm:text-sm transition-all"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian border border-obsidian-border hover:border-gold-antique/50 text-gold-champagne hover:text-white font-semibold text-xs sm:text-sm transition-all"
             title="UPI & Price Settings"
           >
-            <SettingsIcon className="w-4 h-4 text-gold-radiant" />
-            <span>UPI Settings</span>
+            <SettingsIcon className="w-4 h-4 text-gold-radiant shrink-0" />
+            <span className="truncate">UPI Settings</span>
           </button>
 
           <button
             onClick={() => setShowFolderModal(true)}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-obsidian-secondary border border-gold-antique/50 hover:border-gold-radiant text-gold-champagne hover:text-white font-semibold text-xs sm:text-sm transition-all shadow-gold-sm"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-obsidian-secondary border border-gold-antique/50 hover:border-gold-radiant text-gold-champagne hover:text-white font-semibold text-xs sm:text-sm transition-all shadow-gold-sm"
           >
-            <FolderPlus className="w-4 h-4 text-gold-radiant" />
-            <span>+ Create Folder</span>
+            <FolderPlus className="w-4 h-4 text-gold-radiant shrink-0" />
+            <span className="truncate">+ Folder</span>
           </button>
 
           <Link
             href="/admin/upload"
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian font-bold text-xs sm:text-sm hover:brightness-110 transition-all shadow-gold-sm"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian font-bold text-xs sm:text-sm hover:brightness-110 transition-all shadow-gold-sm text-center"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Stotram</span>
+            <Plus className="w-4 h-4 shrink-0" />
+            <span className="truncate">+ Stotram</span>
           </Link>
 
           <button
             onClick={handleLogout}
             title="Log Out of Admin Studio"
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 hover:bg-red-950/70 transition-all text-xs sm:text-sm font-semibold shrink-0 shadow-sm cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 hover:bg-red-950/70 transition-all text-xs sm:text-sm font-semibold shrink-0 shadow-sm cursor-pointer"
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            <span>Logout</span>
+            <span className="truncate">Logout</span>
           </button>
         </div>
       </div>
@@ -533,11 +533,11 @@ export default function AdminManagePage() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-2 sm:pt-0 self-end sm:self-auto flex-wrap">
+                  <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2 pt-2.5 sm:pt-0 border-t sm:border-0 border-white/5 flex-wrap">
                     {/* Lock / Free Toggle Button */}
                     <button
                       onClick={() => handleToggleLock(song)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
                         song.is_locked === 1
                           ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 hover:bg-amber-900/50'
                           : 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/50'
@@ -546,12 +546,12 @@ export default function AdminManagePage() {
                     >
                       {song.is_locked === 1 ? (
                         <>
-                          <Lock className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Locked (₹{song.price || 20})</span>
+                          <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <span className="truncate">Locked (₹{song.price || 20})</span>
                         </>
                       ) : (
                         <>
-                          <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                          <Unlock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                           <span>Free PDF</span>
                         </>
                       )}
@@ -559,29 +559,31 @@ export default function AdminManagePage() {
 
                     <button
                       onClick={() => setSelectedPdfSong(song)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-radiant/15 border border-gold-radiant/40 hover:border-gold-radiant text-gold-radiant hover:bg-gold-radiant/25 text-xs font-semibold transition-all shadow-sm cursor-pointer"
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gold-radiant/15 border border-gold-radiant/40 hover:border-gold-radiant text-gold-radiant hover:bg-gold-radiant/25 text-xs font-semibold transition-all shadow-sm cursor-pointer"
                       title="Download Print-ready Sacred PDF (Admin Master)"
                     >
-                      <Download className="w-3.5 h-3.5 text-gold-radiant" />
-                      <span>Download PDF</span>
+                      <Download className="w-3.5 h-3.5 text-gold-radiant shrink-0" />
+                      <span className="whitespace-nowrap">PDF</span>
                     </button>
 
-                    <Link
-                      href={`/song/${song.slug}`}
-                      target="_blank"
-                      className="p-2 rounded-xl bg-obsidian border border-obsidian-border hover:border-gold-radiant/40 text-gold-champagne hover:text-white transition-colors"
-                      title="View Public Stotram"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Link>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Link
+                        href={`/song/${song.slug}`}
+                        target="_blank"
+                        className="p-2 rounded-xl bg-obsidian border border-obsidian-border hover:border-gold-radiant/40 text-gold-champagne hover:text-white transition-colors"
+                        title="View Public Stotram"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Link>
 
-                    <button
-                      onClick={() => handleDelete(song.id)}
-                      className="p-2 rounded-xl bg-obsidian border border-obsidian-border hover:border-red-500/50 text-red-400 hover:text-red-300 transition-colors"
-                      title="Delete Stotram"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <button
+                        onClick={() => handleDelete(song.id)}
+                        className="p-2 rounded-xl bg-obsidian border border-obsidian-border hover:border-red-500/50 text-red-400 hover:text-red-300 transition-colors"
+                        title="Delete Stotram"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
