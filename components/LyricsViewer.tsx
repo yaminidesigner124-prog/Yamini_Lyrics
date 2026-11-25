@@ -123,7 +123,7 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
               onClick={async () => {
                 await fetch('/api/auth', { method: 'DELETE' }).catch(() => {});
                 document.cookie = 'devotional_admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-                window.location.reload();
+                window.location.href = '/';
               }}
               className="px-3 py-1.5 rounded-xl bg-red-950/50 border border-red-500/50 text-red-300 font-semibold hover:bg-red-900/60 text-xs transition-colors cursor-pointer"
             >

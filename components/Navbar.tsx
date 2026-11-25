@@ -33,7 +33,7 @@ export default function Navbar() {
     }
     document.cookie = 'devotional_admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     setIsAdminLoggedIn(false);
-    window.location.href = '/admin/login';
+    window.location.href = '/';
   };
 
   return (

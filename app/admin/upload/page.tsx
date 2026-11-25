@@ -41,11 +41,11 @@ export default function AdminUploadPage() {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth', { method: 'DELETE' });
-      router.replace('/admin/login');
-      router.refresh();
     } catch (err) {
       console.error('Logout error:', err);
     }
+    document.cookie = 'devotional_admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+    window.location.href = '/';
   };
 
   if (isLoading || !isAuthenticated) {

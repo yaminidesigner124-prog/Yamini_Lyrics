@@ -281,7 +281,7 @@ function renderDynamicCategoryPage(category: any, songs: any[], isAdmin: boolean
     function handleAdminLogout() {
       fetch('/api/auth', { method: 'DELETE' }).finally(() => {
         document.cookie = 'devotional_admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-        window.location.reload();
+        window.location.href = '/';
       });
     }
   </script>
