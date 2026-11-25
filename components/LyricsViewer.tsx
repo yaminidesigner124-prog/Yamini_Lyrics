@@ -53,7 +53,7 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
     }
   }, [language]);
 
-  const isEffectivelyLocked = !isAdmin && song.is_locked === 1 && !isUnlocked;
+  const isEffectivelyLocked = song.is_locked === 1 && !isUnlocked;
 
   const splitLyrics = (text: string) => {
     const lines = (text || '').split('\n').filter((l) => l.trim().length > 0);
@@ -103,6 +103,36 @@ export default function LyricsViewer({ song }: LyricsViewerProps) {
 
   return (
     <div className="w-full space-y-6">
+      {/* Admin Session Active Notice: Shows devotee locked experience while allowing 1-click exit or jump to studio */}
+      {isAdmin && (
+        <div className="p-3.5 rounded-2xl bg-amber-950/30 border border-gold-antique/40 text-xs flex flex-wrap items-center justify-between gap-2 shadow-gold-sm">
+          <div className="flex items-center gap-2 text-gold-champagne font-sans">
+            <span className="w-2.5 h-2.5 rounded-full bg-gold-radiant animate-pulse shrink-0" />
+            <span>
+              <strong>Admin Session Active:</strong> Public user preview &amp; lock is shown. Master tools are in Admin Studio.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href="/admin/manage"
+              className="px-3 py-1.5 rounded-xl bg-gold-radiant/20 border border-gold-radiant/50 text-gold-radiant font-semibold hover:bg-gold-radiant/30 text-xs transition-colors"
+            >
+              Admin Studio
+            </a>
+            <button
+              onClick={async () => {
+                await fetch('/api/auth', { method: 'DELETE' }).catch(() => {});
+                document.cookie = 'devotional_admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+                window.location.reload();
+              }}
+              className="px-3 py-1.5 rounded-xl bg-red-950/50 border border-red-500/50 text-red-300 font-semibold hover:bg-red-900/60 text-xs transition-colors cursor-pointer"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Controls Bar with Clean Toggled Labels - Mobile Optimized */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-obsidian-secondary/90 border border-obsidian-border shadow-gold-sm backdrop-blur-xl">
         

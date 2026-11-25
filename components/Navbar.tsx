@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Shield, Languages, LogOut, ArrowLeft, Layers, FileUp } from 'lucide-react';
@@ -10,6 +10,17 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { language, toggleLanguage, t } = useLanguage();
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+
+  // Check admin authentication on mount and route change
+  useEffect(() => {
+    fetch('/api/auth')
+      .then((res) => res.json())
+      .then((data) => {
+        setIsAdminLoggedIn(!!data?.authenticated);
+      })
+      .catch(() => setIsAdminLoggedIn(false));
+  }, [pathname]);
 
   const isAdminRoute = pathname.startsWith('/admin');
   const isLoginPage = pathname === '/admin/login' || pathname === '/admin/login/';
@@ -21,6 +32,7 @@ export default function Navbar() {
       // ignore
     }
     document.cookie = 'devotional_admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+    setIsAdminLoggedIn(false);
     window.location.href = '/admin/login';
   };
 
@@ -47,6 +59,10 @@ export default function Navbar() {
                 {isAdminRoute ? (
                   <span className="text-[9px] sm:text-xs px-2 py-0.5 rounded-full bg-gold-radiant/20 text-gold-radiant border border-gold-radiant/50 font-bold tracking-wider uppercase shadow-gold-sm">
                     Admin Studio
+                  </span>
+                ) : isAdminLoggedIn ? (
+                  <span className="text-[9px] sm:text-xs px-2 py-0.5 rounded-full bg-gold-radiant/20 text-gold-radiant border border-gold-radiant/50 font-bold tracking-wider uppercase shadow-gold-sm">
+                    Admin Active
                   </span>
                 ) : (
                   <span className="text-[9px] sm:text-xs px-2 py-0.5 rounded-full bg-gold-radiant/15 text-gold-radiant border border-gold-radiant/40 font-semibold tracking-wider uppercase hidden xs:inline shadow-gold-sm">
@@ -101,7 +117,7 @@ export default function Navbar() {
                     <span className="hidden xs:inline">Public Site</span>
                   </Link>
 
-                  {/* Navbar Logout Button with explicit text on all devices */}
+                  {/* Admin Studio Logout Button */}
                   <button
                     onClick={handleAdminLogout}
                     title="Log Out of Admin Studio"
@@ -114,19 +130,31 @@ export default function Navbar() {
               )}
 
               {isLoginPage && (
-                <Link
-                  href="/"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-obsidian-secondary border border-obsidian-border hover:border-gold-antique/50 text-gold-champagne hover:text-gold-radiant text-xs font-semibold transition-all shadow-gold-sm"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Public Site</span>
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-obsidian-secondary border border-obsidian-border hover:border-gold-antique/50 text-gold-champagne hover:text-gold-radiant text-xs font-semibold transition-all shadow-gold-sm"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Public Site</span>
+                  </Link>
+                  {isAdminLoggedIn && (
+                    <button
+                      onClick={handleAdminLogout}
+                      title="Log Out"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5 shrink-0" />
+                      <span>Logout</span>
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           ) : (
-            /* PUBLIC LANDING PAGE NAVIGATION */
+            /* PUBLIC LANDING & USER PAGES NAVIGATION */
             <>
-              {/* Center Navigation Links (Clean English / Telugu toggled) */}
+              {/* Center Navigation Links */}
               <nav className="hidden md:flex items-center gap-1 bg-obsidian-secondary/80 p-1.5 rounded-full border border-obsidian-border shadow-inner">
                 <Link
                   href="/"
@@ -146,7 +174,7 @@ export default function Navbar() {
                 </Link>
               </nav>
 
-              {/* Right Action: Language Toggle & Admin Access */}
+              {/* Right Action: Language Toggle & Admin Controls */}
               <div className="flex items-center gap-2 sm:gap-3">
                 {/* Language Toggle: English (default) <-> Telugu */}
                 <button
@@ -172,15 +200,39 @@ export default function Navbar() {
                   </span>
                 </button>
 
-                {/* Admin Studio Protected Access */}
-                <Link
-                  href="/admin/login"
-                  className="group flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gold-antique/10 hover:bg-gold-antique/20 border border-gold-antique/30 hover:border-gold-radiant text-gold-champagne hover:text-gold-radiant text-xs sm:text-sm font-semibold tracking-wide transition-all duration-200 shadow-gold-sm"
-                  title="Admin Studio (PIN Protected)"
-                >
-                  <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold-radiant group-hover:scale-110 transition-transform" />
-                  <span className="hidden sm:inline">{t('nav.admin')}</span>
-                </Link>
+                {/* If Admin is logged in: Show Admin Studio link + PROMINENT LOGOUT BUTTON ON ALL PAGES */}
+                {isAdminLoggedIn ? (
+                  <>
+                    <Link
+                      href="/admin/manage"
+                      className="group flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-gold-radiant/15 hover:bg-gold-radiant/25 border border-gold-radiant/40 hover:border-gold-radiant text-gold-radiant text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-gold-sm"
+                      title="Open Admin Studio"
+                    >
+                      <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold-radiant group-hover:scale-110 transition-transform" />
+                      <span className="hidden sm:inline">Admin Studio</span>
+                    </Link>
+
+                    {/* Explicit Logout button on all user pages */}
+                    <button
+                      onClick={handleAdminLogout}
+                      title="Log Out & Close Admin Access"
+                      className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 hover:bg-red-950/70 transition-all text-xs sm:text-sm font-bold shadow-sm cursor-pointer shrink-0"
+                    >
+                      <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-red-400" />
+                      <span>Logout</span>
+                    </button>
+                  </>
+                ) : (
+                  /* Regular unauthenticated Admin Login link */
+                  <Link
+                    href="/admin/login"
+                    className="group flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gold-antique/10 hover:bg-gold-antique/20 border border-gold-antique/30 hover:border-gold-radiant text-gold-champagne hover:text-gold-radiant text-xs sm:text-sm font-semibold tracking-wide transition-all duration-200 shadow-gold-sm"
+                    title="Admin Studio (PIN Protected)"
+                  >
+                    <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold-radiant group-hover:scale-110 transition-transform" />
+                    <span className="hidden sm:inline">{t('nav.admin')}</span>
+                  </Link>
+                )}
               </div>
             </>
           )}

@@ -10,6 +10,7 @@ import {
   ChevronRight, Lock, Unlock, Coins, Receipt, Settings as SettingsIcon,
   Copy, Sparkles, AlertCircle
 } from 'lucide-react';
+import PdfGenerator from '@/components/PdfGenerator';
 
 export default function AdminManagePage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function AdminManagePage() {
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [showTxModal, setShowTxModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [selectedPdfSong, setSelectedPdfSong] = useState<Song | null>(null);
 
   // Folder creation form
   const [newFolderName, setNewFolderName] = useState('');
@@ -555,6 +557,15 @@ export default function AdminManagePage() {
                       )}
                     </button>
 
+                    <button
+                      onClick={() => setSelectedPdfSong(song)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-radiant/15 border border-gold-radiant/40 hover:border-gold-radiant text-gold-radiant hover:bg-gold-radiant/25 text-xs font-semibold transition-all shadow-sm cursor-pointer"
+                      title="Download Print-ready Sacred PDF (Admin Master)"
+                    >
+                      <Download className="w-3.5 h-3.5 text-gold-radiant" />
+                      <span>Download PDF</span>
+                    </button>
+
                     <Link
                       href={`/song/${song.slug}`}
                       target="_blank"
@@ -851,6 +862,14 @@ export default function AdminManagePage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Admin Master PDF Generator Modal */}
+      {selectedPdfSong && (
+        <PdfGenerator
+          song={selectedPdfSong}
+          onClose={() => setSelectedPdfSong(null)}
+        />
       )}
     </div>
   );

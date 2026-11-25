@@ -78,7 +78,7 @@ function escapeHtml(str: string): string {
 }
 
 function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, isAdmin: boolean = false): string {
-  const isLocked = isAdmin ? false : (song.is_locked === 1);
+  const isLocked = song.is_locked === 1;
   const price = song.price || 20;
   const teluguLyrics = escapeHtml(song.lyrics_telugu || '');
   const romanLyrics = escapeHtml(song.lyrics_roman || '');
@@ -175,10 +175,21 @@ function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, is
           <a class="px-5 py-2 rounded-full text-xs font-semibold tracking-wider uppercase text-gold-champagne/80 hover:text-white hover:bg-white/5 transition-all" href="/#categories">Deities</a>
         </nav>
         <div class="flex items-center gap-2 sm:gap-3">
-          <a class="group flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gold-antique/10 hover:bg-gold-antique/20 border border-gold-antique/30 hover:border-gold-radiant text-gold-champagne hover:text-gold-radiant text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-gold-sm" href="/admin/login">
-            <svg class="w-4 h-4 text-gold-radiant" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
-            <span class="hidden sm:inline">Admin Studio</span>
-          </a>
+          ${isAdmin ? `
+            <a class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-radiant/15 hover:bg-gold-radiant/25 border border-gold-radiant/40 text-gold-radiant text-xs font-bold transition-all shadow-gold-sm" href="/admin/manage" title="Open Admin Studio">
+              <svg class="w-4 h-4 text-gold-radiant" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
+              <span class="hidden sm:inline">Admin Studio</span>
+            </a>
+            <button onclick="handleAdminLogout()" title="Log Out &amp; Close Admin Access" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 hover:bg-red-950/70 transition-all text-xs font-bold shadow-sm cursor-pointer shrink-0">
+              <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
+              <span>Logout</span>
+            </button>
+          ` : `
+            <a class="group flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gold-antique/10 hover:bg-gold-antique/20 border border-gold-antique/30 hover:border-gold-radiant text-gold-champagne hover:text-gold-radiant text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-gold-sm" href="/admin/login">
+              <svg class="w-4 h-4 text-gold-radiant" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
+              <span class="hidden sm:inline">Admin Studio</span>
+            </a>
+          `}
         </div>
       </div>
     </div>
@@ -187,6 +198,20 @@ function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, is
   <!-- Main Song Container -->
   <main class="flex-1 relative z-10 pb-24 sm:pb-16">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
+      
+      ${isAdmin ? `
+      <!-- Admin Session Active Banner -->
+      <div class="p-3.5 rounded-2xl bg-amber-950/30 border border-gold-antique/40 text-xs flex flex-wrap items-center justify-between gap-2 shadow-gold-sm">
+        <div class="flex items-center gap-2 text-gold-champagne font-sans">
+          <span class="w-2.5 h-2.5 rounded-full bg-gold-radiant animate-pulse shrink-0"></span>
+          <span><strong>Admin Session Active:</strong> Public user preview &amp; lock is shown here. To download master PDFs or manage stotrams, use Admin Studio.</span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a href="/admin/manage" class="px-3 py-1.5 rounded-xl bg-gold-radiant/20 border border-gold-radiant/50 text-gold-radiant font-semibold hover:bg-gold-radiant/30 text-xs transition-colors">Admin Studio</a>
+          <button onclick="handleAdminLogout()" class="px-3 py-1.5 rounded-xl bg-red-950/50 border border-red-500/50 text-red-300 font-semibold hover:bg-red-900/60 text-xs transition-colors cursor-pointer">Logout</button>
+        </div>
+      </div>
+      ` : ''}
       
       <!-- Breadcrumb Navigation -->
       <nav class="flex items-center gap-2 text-xs text-gold-champagne/60 flex-wrap font-sans">
@@ -290,14 +315,8 @@ function renderDynamicSongPage(song: any, relatedSongs: any[], upiId: string, is
         <div id="lyrics-container" class="rounded-3xl bg-card-gradient border border-obsidian-border p-6 sm:p-12 relative overflow-hidden backdrop-blur-xl shadow-gold-md">
           <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none opacity-[0.035] text-[220px] sm:text-[340px] font-serif text-gold-radiant">ॐ</div>
           
-          ${isAdmin ? `
-            <div class="mb-6 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-semibold shadow-sm">
-              <span>👑 Admin Master View • 100% Free Full Access</span>
-            </div>
-          ` : ''}
-
-          <!-- Paywall Blurred Preview for Non-Admin Locked Visitors -->
-          <div id="paywall-overlay" class="${isAdmin ? 'hidden' : isLocked ? '' : 'hidden'} relative space-y-4">
+          <!-- Paywall Blurred Preview for Locked Stotrams -->
+          <div id="paywall-overlay" class="${isLocked ? '' : 'hidden'} relative space-y-4">
             <div class="space-y-2">
               <span class="text-[11px] font-bold uppercase tracking-wider text-gold-radiant/80 font-sans block">
                 Introduction (Preview)
@@ -337,8 +356,8 @@ ${escapeHtml((song.lyrics_roman || song.lyrics_telugu || '').split('\n').filter(
             </div>
           </div>
 
-          <!-- Full Unblurred Lyrics Container (Visible to Admin or Unlocked Users) -->
-          <div id="full-lyrics-container" class="${isAdmin ? '' : isLocked ? 'hidden' : ''}">
+          <!-- Full Unblurred Lyrics Container (Visible when Unlocked or Free) -->
+          <div id="full-lyrics-container" class="${isLocked ? 'hidden' : ''}">
             <div id="lyrics-text" class="max-w-2xl mx-auto font-sans whitespace-pre-wrap text-gold-champagne/95 text-base sm:text-lg leading-loose transition-all duration-200">
 ${romanLyrics}
             </div>
@@ -545,12 +564,14 @@ ${romanLyrics}
       }
     }
 
+    function handleAdminLogout() {
+      fetch('/api/auth', { method: 'DELETE' }).finally(() => {
+        document.cookie = 'devotional_admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+        window.location.reload();
+      });
+    }
+
     function handlePdfTrigger() {
-      // Authenticated Admin bypasses fee: 100% free instant download!
-      if (songData.isAdmin) {
-        downloadPdf();
-        return;
-      }
       const isUnlocked = localStorage.getItem('unlocked_' + songData.slug) === 'true';
       if (songData.isLocked && !isUnlocked) {
         document.getElementById('unlock-modal').classList.remove('hidden');

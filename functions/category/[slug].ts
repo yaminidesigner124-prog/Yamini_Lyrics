@@ -7,6 +7,9 @@ export async function onRequest(context: { request: Request; env: Env; params: {
     const { request, env, params } = context;
     const slug = params.slug;
 
+    const cookieHeader = request.headers.get('Cookie') || '';
+    const isAdmin = cookieHeader.includes('devotional_admin_session=authenticated_sacred_session');
+
     // 1. Check Cloudflare D1 first
     const d1 = env.DB;
     if (d1) {
@@ -20,7 +23,7 @@ export async function onRequest(context: { request: Request; env: Env; params: {
           SELECT * FROM songs WHERE category_id = ? ORDER BY view_count DESC
         `).bind(category.id).all();
 
-        const html = renderDynamicCategoryPage(category, songs || []);
+        const html = renderDynamicCategoryPage(category, songs || [], isAdmin);
         return new Response(html, {
           status: 200,
           headers: {
@@ -48,7 +51,7 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
-function renderDynamicCategoryPage(category: any, songs: any[]): string {
+function renderDynamicCategoryPage(category: any, songs: any[], isAdmin: boolean = false): string {
   const deityNameEn = escapeHtml(category.name_english || 'Deity Collection');
   const deityNameTe = escapeHtml(category.name_telugu || '');
   const subtitle = escapeHtml(category.subtitle_english || 'Complete Devotional Stotrams & Sacred Hymns');
@@ -136,10 +139,21 @@ function renderDynamicCategoryPage(category: any, songs: any[]): string {
           <a class="px-5 py-2 rounded-full text-xs font-semibold tracking-wider uppercase text-gold-champagne/80 hover:text-white hover:bg-white/5 transition-all" href="/#categories">Deities</a>
         </nav>
         <div class="flex items-center gap-2 sm:gap-3">
-          <a class="group flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gold-antique/10 hover:bg-gold-antique/20 border border-gold-antique/30 hover:border-gold-radiant text-gold-champagne hover:text-gold-radiant text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-gold-sm" href="/admin/login">
-            <svg class="w-4 h-4 text-gold-radiant" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
-            <span class="hidden sm:inline">Admin Studio</span>
-          </a>
+          ${isAdmin ? `
+            <a class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-radiant/15 hover:bg-gold-radiant/25 border border-gold-radiant/40 text-gold-radiant text-xs font-bold transition-all shadow-gold-sm" href="/admin/manage" title="Open Admin Studio">
+              <svg class="w-4 h-4 text-gold-radiant" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
+              <span class="hidden sm:inline">Admin Studio</span>
+            </a>
+            <button onclick="handleAdminLogout()" title="Log Out &amp; Close Admin Access" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/40 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-red-300 hover:bg-red-950/70 transition-all text-xs font-bold shadow-sm cursor-pointer shrink-0">
+              <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
+              <span>Logout</span>
+            </button>
+          ` : `
+            <a class="group flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gold-antique/10 hover:bg-gold-antique/20 border border-gold-antique/30 hover:border-gold-radiant text-gold-champagne hover:text-gold-radiant text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-gold-sm" href="/admin/login">
+              <svg class="w-4 h-4 text-gold-radiant" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
+              <span class="hidden sm:inline">Admin Studio</span>
+            </a>
+          `}
         </div>
       </div>
     </div>
@@ -258,6 +272,14 @@ function renderDynamicCategoryPage(category: any, songs: any[]): string {
       <p class="text-gold-champagne/60 font-sans">High-DPI Temple Border PDFs &amp; Phonetic Transliterations • Edge Hosted on Cloudflare</p>
     </div>
   </footer>
+  <script>
+    function handleAdminLogout() {
+      fetch('/api/auth', { method: 'DELETE' }).finally(() => {
+        document.cookie = 'devotional_admin_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+        window.location.reload();
+      });
+    }
+  </script>
 </body>
 </html>`;
 }
