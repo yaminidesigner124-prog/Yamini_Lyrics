@@ -59,7 +59,7 @@ export default function MobileNav() {
             }`}
           >
             <FileUp className="w-5 h-5 mb-0.5" />
-            <span className="text-[11px] font-sans font-semibold">Upload</span>
+            <span className="text-[11px] font-sans font-semibold">Add Song</span>
           </Link>
 
           <button

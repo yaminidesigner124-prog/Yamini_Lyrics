@@ -74,10 +74,10 @@ export default function AdminUploadPage() {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-white font-cinzel">
-              Admin Ingestion Studio
+              Add Devotional Stotram
             </h1>
             <p className="text-xs text-gold-champagne/70 font-sans">
-              Screenshot OCR Extraction, Auto-Transliteration & Direct D1 Publishing
+              Paste Telugu Lyrics Directly, 1-Click Auto-Transliteration & Cloudflare D1 Publishing
             </p>
           </div>
         </div>

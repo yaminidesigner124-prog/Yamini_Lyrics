@@ -1,17 +1,19 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Category, Song } from '@/lib/types';
 import { transliterateTeluguToRoman, transliterateTitle } from '@/lib/transliterate';
 import { 
-  Upload, 
   Sparkles, 
   Check, 
-  Image as ImageIcon, 
   RefreshCw,
   Send,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  Lock,
+  Unlock,
+  Languages
 } from 'lucide-react';
 
 interface OcrUploaderProps {
@@ -22,13 +24,6 @@ interface OcrUploaderProps {
 
 export default function OcrUploader({ categories, initialSong, isEditing = false }: OcrUploaderProps) {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isProcessingOcr, setIsProcessingOcr] = useState(false);
-  const [isAiFixing, setIsAiFixing] = useState(false);
-  const [ocrStatus, setOcrStatus] = useState<string>('');
-  const [extractionEngine, setExtractionEngine] = useState<'gemini' | 'tesseract' | null>(null);
 
   // Form states
   const [categoryId, setCategoryId] = useState<string>(initialSong?.category_id || (categories[0]?.id || ''));
@@ -38,6 +33,7 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
   const [lyricsTelugu, setLyricsTelugu] = useState<string>(initialSong?.lyrics_telugu || '');
   const [lyricsRoman, setLyricsRoman] = useState<string>(initialSong?.lyrics_roman || '');
   const [meaningEnglish, setMeaningEnglish] = useState<string>(initialSong?.meaning_english || '');
+
   const toCleanTags = (val: any): string => {
     if (!val) return '';
     if (Array.isArray(val)) return val.map((v) => String(v).trim()).filter(Boolean).join(', ');
@@ -67,9 +63,28 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
     }
   };
 
-  // Perform full transliteration of Telugu lyrics to Roman (Standard Engine)
+  // When Telugu lyrics are pasted, auto-fill Title if empty
+  const handleTeluguLyricsChange = (val: string) => {
+    setLyricsTelugu(val);
+    if (!titleTelugu.trim()) {
+      const firstLine = val.split('\n').map((l) => l.trim()).filter(Boolean)[0];
+      if (firstLine) {
+        // Clean any leading numbers, symbols
+        const cleanTitle = firstLine.replace(/^[0-9.\-\s|]+/, '').replace(/[-|]+.*$/, '').trim().slice(0, 50);
+        if (cleanTitle) {
+          handleTeluguTitleChange(cleanTitle);
+        }
+      }
+    }
+  };
+
+  // Perform full phonetic transliteration of Telugu lyrics to Roman (Standard Local Engine - Zero API required)
   const handleAutoTransliterate = () => {
-    if (!lyricsTelugu) return;
+    if (!lyricsTelugu.trim()) {
+      setErrorMsg('Please paste or type Telugu lyrics first.');
+      return;
+    }
+    setErrorMsg(null);
     const roman = transliterateTeluguToRoman(lyricsTelugu);
     setLyricsRoman(roman);
 
@@ -85,179 +100,11 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
         );
       }
     }
+    setSuccessMsg('✨ Roman transliteration generated instantly from Telugu lyrics!');
+    setTimeout(() => setSuccessMsg(null), 3500);
   };
 
-  // Gemini AI Spell Check & Auto-Fix on Telugu Lyrics
-  const handleAiSpellCheck = async () => {
-    if (!lyricsTelugu.trim()) {
-      setErrorMsg('Please paste or enter Telugu text to spell check.');
-      return;
-    }
-
-    setIsAiFixing(true);
-    setOcrStatus('✨ Gemini AI: Correcting Telugu spellings, ligatures, and formatting verses...');
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch('/api/ai-extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawText: lyricsTelugu }),
-      });
-
-      const result = await res.json();
-      const data = result.data || result;
-
-      if (res.ok && result.success && data && (data.lyrics_telugu || data.lyricsTelugu)) {
-        const telLyrics = data.lyrics_telugu || data.lyricsTelugu || '';
-        const romLyrics = data.lyrics_roman || data.lyricsRoman || '';
-        const telTitle = data.title_telugu || data.titleTelugu || '';
-        const romTitle = data.title_roman || data.titleRoman || '';
-        const engMeaning = data.meaning_english || data.meaning || '';
-        const catSlug = data.suggested_category || data.suggestedCategory || '';
-
-        if (telLyrics) setLyricsTelugu(telLyrics);
-        if (romLyrics) setLyricsRoman(romLyrics);
-        if (telTitle && !titleTelugu) setTitleTelugu(telTitle);
-        if (romTitle && !titleRoman) setTitleRoman(romTitle);
-        if (data.slug && !slug) setSlug(data.slug);
-        if (engMeaning && !meaningEnglish) setMeaningEnglish(engMeaning);
-        if (data.tags && !tags) setTags(toCleanTags(data.tags));
-
-        if (catSlug) {
-          const match = categories.find((c) => c.slug === catSlug || c.id === catSlug);
-          if (match) setCategoryId(match.id);
-        }
-
-        setOcrStatus(`✨ Extracted & verified with ${result.engine || 'Gemini AI'} (100% authentic Telugu)`);
-        setExtractionEngine('gemini');
-        setSuccessMsg('Gemini AI successfully corrected Telugu spellings and verses!');
-        setTimeout(() => setSuccessMsg(null), 4000);
-      } else {
-        // Fallback to local regex transliteration
-        handleAutoTransliterate();
-        setOcrStatus(result.message || 'Gemini AI temporarily busy. Standard phonetic transliteration applied.');
-      }
-    } catch (err: any) {
-      console.warn('AI Spell check fallback:', err);
-      handleAutoTransliterate();
-      setOcrStatus('Used standard transliteration engine (AI network error).');
-    } finally {
-      setIsAiFixing(false);
-    }
-  };
-
-  // Handle image upload and OCR extraction (Gemini Vision First -> Tesseract Fallback)
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setImagePreview(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    await processImageOCR(file);
-  };
-
-  const processImageOCR = async (file: File) => {
-    setIsProcessingOcr(true);
-    setErrorMsg(null);
-    setOcrStatus('✨ Connecting to Gemini AI Vision for high-precision extraction...');
-
-    // Convert file to base64
-    const base64Data = await new Promise<string>((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result as string);
-      r.onerror = reject;
-      r.readAsDataURL(file);
-    });
-
-    let geminiSucceeded = false;
-
-    // STEP 1: Try Gemini Vision API First (if configured in .env)
-    try {
-      const res = await fetch('/api/ai-extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: base64Data,
-          mimeType: file.type || 'image/jpeg',
-        }),
-      });
-
-      const result = await res.json();
-      const data = result.data || result;
-
-      if (res.ok && result.success && !result.fallback && data && (data.lyrics_telugu || data.lyricsTelugu)) {
-        // High-precision Gemini output!
-        const telLyrics = data.lyrics_telugu || data.lyricsTelugu || '';
-        const romLyrics = data.lyrics_roman || data.lyricsRoman || '';
-        const telTitle = data.title_telugu || data.titleTelugu || '';
-        const romTitle = data.title_roman || data.titleRoman || '';
-        const engMeaning = data.meaning_english || data.meaning || '';
-        const catSlug = data.suggested_category || data.suggestedCategory || '';
-
-        if (telTitle) setTitleTelugu(telTitle);
-        if (romTitle) setTitleRoman(romTitle);
-        if (data.slug) setSlug(data.slug);
-        if (telLyrics) setLyricsTelugu(telLyrics);
-        if (romLyrics) setLyricsRoman(romLyrics);
-        if (engMeaning) setMeaningEnglish(engMeaning);
-        if (data.tags) setTags(toCleanTags(data.tags));
-
-        if (catSlug) {
-          const match = categories.find((c) => c.slug === catSlug || c.id === catSlug);
-          if (match) setCategoryId(match.id);
-        }
-
-        setOcrStatus(`✨ 100% Extracted with ${result.engine || 'Gemini AI Vision'} (Accurate Telugu spellings & verses)`);
-        setExtractionEngine('gemini');
-        geminiSucceeded = true;
-      } else {
-        console.warn('Gemini Vision fallback signal:', result.message);
-        setOcrStatus(`Gemini signal: ${result.message || 'Trying local scanner...'}`);
-      }
-    } catch (geminiErr) {
-      console.warn('Gemini Vision API request failed, falling back to local Tesseract OCR:', geminiErr);
-    }
-
-    // STEP 2: Fallback to standard Tesseract.js engine if Gemini wasn't available
-    if (!geminiSucceeded) {
-      setOcrStatus('Gemini API unavailable. Scanning with local Tesseract OCR engine...');
-      setExtractionEngine('tesseract');
-
-      try {
-        let extractedText = '';
-        // @ts-ignore
-        const tesseractPkg = await import('tesseract.js').catch(() => null);
-        if (tesseractPkg && tesseractPkg.createWorker) {
-          const worker = await tesseractPkg.createWorker('tel+eng');
-          const ret = await worker.recognize(file);
-          extractedText = ret.data.text;
-          await worker.terminate();
-        } else {
-          extractedText = `(Screenshot loaded: ${file.name})\nPlease verify and paste lyrics in the editor below.`;
-        }
-
-        if (extractedText && extractedText.trim()) {
-          setLyricsTelugu((prev) => (prev ? `${prev}\n\n${extractedText}` : extractedText));
-          const roman = transliterateTeluguToRoman(extractedText);
-          setLyricsRoman((prev) => (prev ? `${prev}\n\n${roman}` : roman));
-        }
-
-        setOcrStatus('Standard Tesseract OCR completed. You can click "✨ Gemini AI Spell Check" to auto-fix typos.');
-      } catch (ocrErr: any) {
-        console.error('OCR Error:', ocrErr);
-        setOcrStatus('OCR extraction error. You can directly paste or type text.');
-      }
-    }
-
-    setIsProcessingOcr(false);
-  };
-
-  // Submit / Publish to Cloudflare D1
+  // Submit / Publish directly to Cloudflare D1
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -327,107 +174,37 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8">
-      {/* Upload Zone & OCR Input */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-card-gradient border border-obsidian-border shadow-gold-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gold-radiant/20 border border-gold-antique/40 text-gold-radiant shrink-0">
-              <Upload className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white font-cinzel">
-                  Devotional Stotram Ingestion & OCR
-                </h2>
-                <span className="px-2 py-0.5 rounded-full bg-gold-radiant/15 border border-gold-radiant/40 text-gold-radiant text-[10px] font-bold uppercase tracking-wider hidden sm:inline">
-                  Gemini AI Enabled
-                </span>
-              </div>
-              <p className="text-xs text-gold-champagne/70 font-sans">
-                Upload stotram photo / screenshot or directly paste raw lyrics (auto-corrects Telugu ligatures & spellings)
-              </p>
-            </div>
+    <div className="w-full max-w-6xl mx-auto space-y-6">
+      
+      {/* Direct Lyric Paste Banner */}
+      <div className="p-5 sm:p-7 rounded-3xl bg-card-gradient border border-obsidian-border shadow-gold-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-radiant/20 border border-gold-antique/40 text-gold-radiant shadow-gold-sm shrink-0">
+            <FileText className="w-6 h-6" />
           </div>
-
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={handleAiSpellCheck}
-              disabled={!lyricsTelugu || isAiFixing}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian text-xs font-bold hover:brightness-110 transition-all disabled:opacity-40 shadow-gold-sm"
-              title="Fix Telugu typos, missing ottus, ligatures and format verses with Gemini AI"
-            >
-              {isAiFixing ? (
-                <RefreshCw className="w-4 h-4 animate-spin text-obsidian shrink-0" />
-              ) : (
-                <Sparkles className="w-4 h-4 text-obsidian shrink-0" />
-              )}
-              <span>{isAiFixing ? 'AI Correcting...' : '✨ Gemini AI Spell Check'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleAutoTransliterate}
-              disabled={!lyricsTelugu}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-obsidian-secondary border border-gold-antique/40 text-gold-champagne text-xs font-semibold hover:text-white hover:border-gold-radiant transition-all disabled:opacity-40"
-              title="Phonetic transliteration using standard engine"
-            >
-              <span>Phonetic Transliterate</span>
-            </button>
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-white font-cinzel">
+              {isEditing ? 'Edit Devotional Stotram' : 'Devotional Lyric Studio (Direct Paste)'}
+            </h2>
+            <p className="text-xs text-gold-champagne/70 font-sans mt-0.5">
+              Copy & paste Telugu lyrics directly. Click &quot;Auto-Transliterate&quot; to generate Roman English pronunciation instantly.
+            </p>
           </div>
         </div>
 
-        {/* Dropzone */}
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gold-antique/30 hover:border-gold-radiant/70 rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all hover:bg-gold-antique/5 group"
+        <button
+          type="button"
+          onClick={handleAutoTransliterate}
+          disabled={!lyricsTelugu.trim()}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique text-obsidian text-xs font-bold hover:brightness-110 transition-all disabled:opacity-40 shadow-gold-sm cursor-pointer shrink-0"
+          title="Convert Telugu lyrics to Roman phonetic English chanting"
         >
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*"
-            className="hidden"
-          />
-
-          <div className="flex flex-col items-center justify-center gap-2">
-            <div className="w-12 h-12 rounded-full bg-obsidian-secondary flex items-center justify-center border border-obsidian-border group-hover:scale-110 transition-transform">
-              {isProcessingOcr ? (
-                <RefreshCw className="w-6 h-6 text-gold-radiant animate-spin" />
-              ) : (
-                <ImageIcon className="w-6 h-6 text-gold-antique" />
-              )}
-            </div>
-
-            <p className="text-sm font-semibold text-stone-200 font-sans">
-              {isProcessingOcr
-                ? ocrStatus
-                : 'Click or drop Stotram Screenshot / Photo (AI Auto-Extraction)'}
-            </p>
-            <p className="text-xs text-gold-champagne/60 font-sans">
-              ✨ Primary: Gemini AI Vision (Auto-Spelling Correction) • Fallback: Tesseract OCR
-            </p>
-          </div>
-        </div>
-
-        {/* Image Preview if uploaded */}
-        {imagePreview && (
-          <div className="mt-4 p-3 rounded-xl bg-obsidian border border-obsidian-border flex items-center gap-3">
-            <img
-              src={imagePreview}
-              alt="Uploaded screenshot"
-              className="w-16 h-16 object-cover rounded-lg border border-gold-antique/30"
-            />
-            <div className="text-xs">
-              <span className="text-gold-radiant font-semibold">Screenshot Preview</span>
-              <p className="text-gold-champagne/60 font-sans">{ocrStatus || 'Ready for review'}</p>
-            </div>
-          </div>
-        )}
+          <Sparkles className="w-4 h-4 text-obsidian shrink-0" />
+          <span>Auto-Transliterate to Roman</span>
+        </button>
       </div>
 
-      {/* Main Publishing Form & Review Panel */}
+      {/* Main Publishing Form */}
       <form onSubmit={handlePublish} className="space-y-6">
         {errorMsg && (
           <div className="p-4 rounded-xl bg-red-950/60 border border-red-500/40 text-red-200 text-sm flex items-center gap-2 font-sans">
@@ -443,11 +220,11 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
           </div>
         )}
 
-        {/* Top Metadata Row: Deity, Roman Title, Telugu Title, Slug */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 rounded-3xl bg-card-gradient border border-obsidian-border">
+        {/* Top Metadata Row: Deity Category, Telugu Title, Roman Title, URL Slug */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-5 sm:p-6 rounded-3xl bg-card-gradient border border-obsidian-border">
           {/* Category Dropdown */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider">
+            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider block">
               Deity Category *
             </label>
             <select
@@ -457,44 +234,44 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
             >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name_english}
+                  {c.name_english} ({c.name_telugu})
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Telugu Title */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider block">
+              Title (Telugu Script) *
+            </label>
+            <input
+              type="text"
+              value={titleTelugu}
+              onChange={(e) => handleTeluguTitleChange(e.target.value)}
+              placeholder="e.g. చల్లండి బంతిపూలు"
+              className="w-full px-3 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-white text-sm focus:border-gold-radiant focus:outline-none font-telugu"
+            />
+          </div>
+
           {/* Roman Title */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider">
-              Title (Roman Script) *
+            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider block">
+              Title (Roman English) *
             </label>
             <input
               type="text"
               required
               value={titleRoman}
               onChange={(e) => setTitleRoman(e.target.value)}
-              placeholder="e.g. Sri Venkateswara Suprabhatam"
+              placeholder="e.g. Challandi Banthipoolu"
               className="w-full px-3 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-white text-sm focus:border-gold-radiant focus:outline-none font-sans"
-            />
-          </div>
-
-          {/* Telugu Title */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider">
-              Title (Telugu Script)
-            </label>
-            <input
-              type="text"
-              value={titleTelugu}
-              onChange={(e) => handleTeluguTitleChange(e.target.value)}
-              placeholder="e.g. శ్రీ వేంకటేశ్వర సుప్రభాతం"
-              className="w-full px-3 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-white text-sm focus:border-gold-radiant focus:outline-none font-telugu"
             />
           </div>
 
           {/* URL Slug */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider">
+            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider block">
               URL Slug *
             </label>
             <input
@@ -502,105 +279,109 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
               required
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              placeholder="sri-venkateswara-suprabhatam"
+              placeholder="challandi-banthipoolu"
               className="w-full px-3 py-2.5 rounded-xl bg-obsidian border border-obsidian-border text-white text-sm focus:border-gold-radiant focus:outline-none font-mono text-xs"
             />
           </div>
         </div>
 
-        {/* Dual-Column Split Review Editor */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-3xl bg-card-gradient border border-obsidian-border">
-          {/* Column 1: Roman Pronunciation */}
+        {/* Dual-Column Lyrics Editor: Telugu (Left/Primary) and Roman (Right/Chanting) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-5 sm:p-6 rounded-3xl bg-card-gradient border border-obsidian-border">
+          {/* Column 1: Telugu Script (Original / Direct Paste) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between pb-1">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-bold text-gold-radiant font-sans">
+                  Telugu Script (Paste Original Lyrics) *
+                </label>
+              </div>
+              <span className="text-[10px] text-gold-champagne/60 font-sans">
+                {lyricsTelugu.split('\n').filter(Boolean).length} lines
+              </span>
+            </div>
+            <textarea
+              required
+              rows={16}
+              value={lyricsTelugu}
+              onChange={(e) => handleTeluguLyricsChange(e.target.value)}
+              placeholder="ఇక్కడ తెలుగు లిరిక్స్ కాపీ చేసి నేరుగా పేస్ట్ చేయండి...
+
+ఉదాహరణ:
+చల్లండి బంతిపూలు - దుర్గమ్మపైన చల్లండి సన్నజాజులు ||2||
+1. కంచి కామాక్షిపైన-చల్లండి బంతిపూలు,
+మధురా మీనాక్షిపైనచల్లండి బంతిపూలు
+కలకత్తా కాళిపైన - చల్లండి బంతిపూలు..."
+              className="w-full p-4 rounded-2xl bg-obsidian border border-obsidian-border focus:border-gold-radiant text-stone-100 text-base leading-relaxed font-telugu focus:outline-none resize-y"
+            />
+          </div>
+
+          {/* Column 2: Roman Pronunciation (English Chanting) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between pb-1">
               <label className="text-sm font-bold text-gold-radiant font-sans">
                 Roman Pronunciation (English Chanting) *
               </label>
-              <span className="text-[10px] text-gold-champagne/60 font-sans">
-                {lyricsRoman.split('\n').filter(Boolean).length} lines
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAutoTransliterate}
+                  disabled={!lyricsTelugu.trim()}
+                  className="text-[11px] font-semibold text-gold-radiant hover:text-white flex items-center gap-1 transition-colors disabled:opacity-40"
+                  title="Generate English pronunciation automatically from Telugu"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-gold-radiant" />
+                  <span>Auto-Transliterate</span>
+                </button>
+                <span className="text-[10px] text-gold-champagne/60 font-sans">
+                  {lyricsRoman.split('\n').filter(Boolean).length} lines
+                </span>
+              </div>
             </div>
             <textarea
               required
               rows={16}
               value={lyricsRoman}
               onChange={(e) => setLyricsRoman(e.target.value)}
-              placeholder="Type or auto-transliterate Roman pronunciation here..."
-              className="w-full p-4 rounded-2xl bg-obsidian border border-obsidian-border focus:border-gold-radiant text-gold-champagne text-sm leading-relaxed font-sans focus:outline-none resize-y"
-            />
-          </div>
+              placeholder="Roman pronunciation will be auto-generated here, or you can paste/edit it directly...
 
-          {/* Column 2: Telugu Script */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between pb-1">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-bold text-gold-radiant font-sans">
-                  Telugu Script (Original)
-                </label>
-                {extractionEngine === 'gemini' && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-semibold flex items-center gap-1">
-                    <Check className="w-3 h-3" />
-                    <span>Gemini AI Verified</span>
-                  </span>
-                )}
-                {extractionEngine === 'tesseract' && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-500/40 text-amber-300 font-semibold">
-                    Tesseract (Fallback)
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={handleAiSpellCheck}
-                  disabled={!lyricsTelugu || isAiFixing}
-                  className="text-[11px] font-semibold text-gold-radiant hover:text-white flex items-center gap-1 transition-colors disabled:opacity-40"
-                  title="Correct misspelled Telugu words and missing ottus with Gemini AI"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-gold-radiant" />
-                  <span>{isAiFixing ? 'Fixing...' : 'Fix Typos (AI)'}</span>
-                </button>
-                <span className="text-[10px] text-gold-champagne/60 font-sans">
-                  {lyricsTelugu.split('\n').filter(Boolean).length} lines
-                </span>
-              </div>
-            </div>
-            <textarea
-              rows={16}
-              value={lyricsTelugu}
-              onChange={(e) => setLyricsTelugu(e.target.value)}
-              placeholder="Paste Telugu lyrics here..."
-              className="w-full p-4 rounded-2xl bg-obsidian border border-obsidian-border focus:border-gold-radiant text-stone-100 text-base leading-relaxed font-telugu focus:outline-none resize-y"
+Example:
+Challandi banthipoolu - durgammapaina challandi sannajaajulu ||2||
+1. Kanchi kaamaakshipaina-challandi banthipoolu..."
+              className="w-full p-4 rounded-2xl bg-obsidian border border-obsidian-border focus:border-gold-radiant text-gold-champagne text-sm leading-relaxed font-sans focus:outline-none resize-y"
             />
           </div>
         </div>
 
-        {/* English Meaning Box */}
-        <div className="p-6 rounded-3xl bg-card-gradient border border-obsidian-border space-y-2">
+        {/* English Meaning Box (Optional) */}
+        <div className="p-5 sm:p-6 rounded-3xl bg-card-gradient border border-obsidian-border space-y-2">
           <label className="text-sm font-bold text-gold-radiant font-sans">
-            English Meaning & Significance (Verse-by-verse translation)
+            English Meaning & Devotional Significance (Optional)
           </label>
           <textarea
-            rows={6}
+            rows={5}
             value={meaningEnglish}
             onChange={(e) => setMeaningEnglish(e.target.value)}
-            placeholder="Provide verse-by-verse English translation or spiritual significance..."
+            placeholder="Optional spiritual meaning, deity background, or verse-by-verse English explanation..."
             className="w-full p-4 rounded-2xl bg-obsidian border border-obsidian-border focus:border-gold-radiant text-stone-200 text-sm leading-relaxed font-sans focus:outline-none resize-y"
           />
         </div>
 
         {/* Sacred PDF Lock & Offering Setting */}
-        <div className="p-6 rounded-3xl bg-card-gradient border border-gold-antique/30 space-y-4">
+        <div className="p-5 sm:p-6 rounded-3xl bg-card-gradient border border-gold-antique/30 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-base">🔒</span>
+                {isLocked ? (
+                  <Lock className="w-4 h-4 text-amber-400" />
+                ) : (
+                  <Unlock className="w-4 h-4 text-emerald-400" />
+                )}
                 <h3 className="text-sm font-bold text-white font-cinzel">
-                  Sacred PDF Download Lock (Paid Offering)
+                  Sacred PDF Download Offering Lock
                 </h3>
               </div>
               <p className="text-xs text-gold-champagne/70 font-sans">
-                Require devotees to make a UPI offering before unlocking and downloading the print-ready sacred PDF.
+                Choose whether this song has free sacred PDF downloads or requires a UPI offering (e.g. ₹20).
               </p>
             </div>
 
@@ -619,7 +400,7 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
           </div>
 
           {isLocked && (
-            <div className="pt-3 border-t border-obsidian-border flex items-center gap-3">
+            <div className="pt-3 border-t border-obsidian-border flex flex-wrap items-center gap-3">
               <label className="text-xs font-semibold text-gold-champagne/90 font-sans">
                 PDF Offering Amount (₹ INR):
               </label>
@@ -644,14 +425,14 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
         {/* Tags Row & Submit Button */}
         <div className="p-4 sm:p-6 rounded-3xl bg-card-gradient border border-obsidian-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="w-full sm:flex-1 min-w-0 space-y-1">
-            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider">
+            <label className="text-xs font-semibold text-gold-champagne/80 font-sans uppercase tracking-wider block">
               Search Tags (Comma separated)
             </label>
             <input
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              placeholder="stotram, suktam, bhajan, harati, sureshwara"
+              placeholder="durga devi, challandi banthipoolu, bhajan, stotram, telugu lyrics"
               className="w-full px-3 py-2 rounded-xl bg-obsidian border border-obsidian-border text-white text-xs focus:border-gold-radiant focus:outline-none font-sans"
             />
           </div>
@@ -668,7 +449,7 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique hover:brightness-110 text-obsidian font-bold text-xs sm:text-sm transition-all shadow-gold-md disabled:opacity-50 text-center"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold-radiant to-gold-antique hover:brightness-110 text-obsidian font-bold text-xs sm:text-sm transition-all shadow-gold-md disabled:opacity-50 text-center cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -678,7 +459,7 @@ export default function OcrUploader({ categories, initialSong, isEditing = false
               ) : (
                 <>
                   <Send className="w-4 h-4 text-obsidian shrink-0" />
-                  <span className="truncate">{isEditing ? 'Update Stotram' : 'Publish to D1'}</span>
+                  <span className="truncate">{isEditing ? 'Update Stotram' : 'Publish to Cloudflare D1'}</span>
                 </>
               )}
             </button>

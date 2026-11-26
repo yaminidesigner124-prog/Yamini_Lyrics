@@ -99,7 +99,7 @@ export default function Navbar() {
                       }`}
                     >
                       <FileUp className="w-3.5 h-3.5" />
-                      <span>Upload & OCR</span>
+                      <span>Add Stotram</span>
                     </Link>
                   </nav>
 
@@ -213,7 +213,7 @@ export default function Navbar() {
                 }`}
               >
                 <FileUp className="w-3.5 h-3.5 shrink-0" />
-                <span>Upload & OCR</span>
+                <span>Add Stotram</span>
               </Link>
 
               <button
